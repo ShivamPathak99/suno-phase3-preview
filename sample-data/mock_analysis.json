@@ -1,0 +1,51 @@
+{
+  "level": "word",
+  "wcpm": 21.4,
+  "accuracy_pct": 68.0,
+  "words": [
+    {
+      "passage_word": "The",
+      "status": "correct",
+      "heard_as": null,
+      "confidence": "high"
+    },
+    {
+      "passage_word": "cat",
+      "status": "correct",
+      "heard_as": null,
+      "confidence": "high"
+    },
+    {
+      "passage_word": "sat",
+      "status": "substituted",
+      "heard_as": "sit",
+      "confidence": "medium"
+    },
+    {
+      "passage_word": "on",
+      "status": "skipped",
+      "heard_as": null,
+      "confidence": "high"
+    },
+    {
+      "passage_word": "the",
+      "status": "correct",
+      "heard_as": null,
+      "confidence": "high"
+    },
+    {
+      "passage_word": "brown",
+      "status": "hesitation",
+      "heard_as": "brown",
+      "confidence": "medium"
+    },
+    {
+      "passage_word": "mat",
+      "status": "unclear",
+      "heard_as": null,
+      "confidence": "low"
+    }
+  ],
+  "summary_for_teacher": "Ravi reads common words confidently but skips connector words and pauses on longer ones. He is solidly at word level, approaching paragraph.",
+  "recommended_focus": "Blending two-syllable words"
+}
