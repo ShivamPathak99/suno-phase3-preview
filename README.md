@@ -54,3 +54,13 @@ helpers, but only processes curated recordings explicitly approved for OpenAI
 processing, temporary public storage, and repository visibility. Its temporary
 objects and unconfirmed drafts are matched to the individual run before
 cleanup.
+
+## Worksheet generator
+
+`POST /api/worksheets` accepts `{ "level", "language" }` and returns only the
+frozen worksheet JSON shape: `{ "title", "body", "question" }`. Generation
+uses GPT-5.6 Structured Outputs, then the server checks the level-specific body
+length and that the card contains one short question. Run `npm run test:worksheets`
+for the offline contract check. With `OPENAI_API_KEY` configured,
+`npm run verify:worksheets` exercises the route against GPT-5.6 for all four
+English levels.

@@ -16,7 +16,9 @@
     "test:analysis": "node --import tsx scripts/test-analysis-contract.ts",
     "verify:analysis": "node --env-file=.env.local --import tsx scripts/verify-analysis-live.ts",
     "test:golden": "node --import tsx scripts/test-golden-harness.ts",
-    "golden": "node --env-file=.env.local --import tsx scripts/golden.ts"
+    "golden": "node --env-file=.env.local --import tsx scripts/golden.ts",
+    "test:worksheets": "node --import tsx scripts/test-worksheet-contract.ts",
+    "verify:worksheets": "node --env-file=.env.local --import tsx scripts/verify-worksheet-live.ts"
   },
   "engines": {
     "node": ">=20.9.0"
