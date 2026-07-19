@@ -16,6 +16,7 @@ type FlowState =
   | "processing"
   | "complete"
   | "mic-error"
+  | "no-microphone-signal"
   | "processing-error"
   | "unassessable-quiet"
   | "unassessable-too-fast"
@@ -52,6 +53,7 @@ class PipelineTimeoutError extends Error {
 
 const maximumRecordingSeconds = 120;
 const minimumKeepDurationSeconds = 5;
+const microphoneSignalThreshold = 0.012;
 const mockStageDelayMs = 2_000;
 const stageTimeoutMs = 45_000;
 const sampleRecordingSource = "/sample-recordings/child-struggling.mp4";
@@ -291,8 +293,9 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
   const [processingStep, setProcessingStep] = useState(0);
   const [recording, setRecording] = useState<CapturedRecording | null>(null);
   const [completedAssessment, setCompletedAssessment] = useState<AnalyzeResponse | null>(null);
-  const [meterLevels, setMeterLevels] = useState([0.18, 0.28, 0.42, 0.28, 0.18]);
+  const [meterLevels, setMeterLevels] = useState([0, 0, 0, 0, 0]);
   const [hasLoadedSample, setHasLoadedSample] = useState(false);
+  const [hasDetectedMicrophoneSignal, setHasDetectedMicrophoneSignal] = useState(false);
 
   const autoStopTimerRef = useRef<number | null>(null);
   const elapsedSecondsRef = useRef(0);
@@ -302,6 +305,8 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
   const activeAbortControllerRef = useRef<AbortController | null>(null);
   const sampleRunRef = useRef(0);
   const sampleProcessingRef = useRef(false);
+  const hasDetectedMicrophoneSignalRef = useRef(false);
+  const canMeasureMicrophoneSignalRef = useRef(false);
   const recordingSessionRef = useRef(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recorderChunksRef = useRef<Blob[]>([]);
@@ -572,20 +577,36 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
       return;
     }
 
+    canMeasureMicrophoneSignalRef.current = true;
     const audioContext = new AudioContextConstructor();
     const analyser = audioContext.createAnalyser();
     const source = audioContext.createMediaStreamSource(stream);
-    const data = new Uint8Array(analyser.frequencyBinCount);
 
     analyser.fftSize = 64;
+    const data = new Uint8Array(analyser.fftSize);
     source.connect(analyser);
     audioContextRef.current = audioContext;
+    void audioContext.resume().catch(() => {
+      // The meter is advisory. Recording can still proceed on browsers that
+      // postpone AudioContext playback permission.
+    });
 
     meterTimerRef.current = window.setInterval(() => {
-      analyser.getByteFrequencyData(data);
-      const average = data.reduce((sum, value) => sum + value, 0) / data.length / 255;
+      analyser.getByteTimeDomainData(data);
+      const rms = Math.sqrt(
+        data.reduce((sum, value) => {
+          const normalized = (value - 128) / 128;
+          return sum + normalized * normalized;
+        }, 0) / data.length,
+      );
 
-      setMeterLevels([0.42, 0.63, 1, 0.63, 0.42].map((weight) => Math.max(0.12, average * weight + 0.1)));
+      if (rms >= microphoneSignalThreshold && !hasDetectedMicrophoneSignalRef.current) {
+        hasDetectedMicrophoneSignalRef.current = true;
+        setHasDetectedMicrophoneSignal(true);
+      }
+
+      const meterLevel = Math.min(1, rms * 9);
+      setMeterLevels([0.42, 0.63, 1, 0.63, 0.42].map((weight) => meterLevel * weight));
     }, 120);
   }, []);
 
@@ -599,6 +620,10 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
     sampleProcessingRef.current = false;
     stopSamplePlayback();
     setHasLoadedSample(false);
+    hasDetectedMicrophoneSignalRef.current = false;
+    canMeasureMicrophoneSignalRef.current = false;
+    setHasDetectedMicrophoneSignal(false);
+    setMeterLevels([0, 0, 0, 0, 0]);
     setIsRequestingMicrophone(true);
     setMicrophoneMessage("");
     setNotice("");
@@ -651,7 +676,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
 
         clearRecordingResources();
         setIsStopping(false);
-        setMeterLevels([0.18, 0.28, 0.42, 0.28, 0.18]);
+        setMeterLevels([0, 0, 0, 0, 0]);
 
         if (blob.size === 0) {
           setMicrophoneMessage("No audio was captured. Check the microphone, then try again.");
@@ -664,6 +689,14 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
           file: new File([blob], recordingFileName(finalMimeType), { type: finalMimeType }),
         };
         setRecording(capturedRecording);
+
+        if (canMeasureMicrophoneSignalRef.current && !hasDetectedMicrophoneSignalRef.current) {
+          setMicrophoneMessage(
+            "No sound reached the selected microphone. Choose the correct microphone in your browser's site settings, then try again.",
+          );
+          setFlowState("no-microphone-signal");
+          return;
+        }
 
         if (durationSec < minimumKeepDurationSeconds) {
           setFlowState("short-recording");
@@ -727,6 +760,9 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
     setCompletedAssessment(null);
     setElapsedSeconds(0);
     setHasLoadedSample(true);
+    hasDetectedMicrophoneSignalRef.current = false;
+    canMeasureMicrophoneSignalRef.current = false;
+    setHasDetectedMicrophoneSignal(false);
 
     const sampleAudio = sampleAudioRef.current;
 
@@ -803,10 +839,14 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
     setNotice("");
     setMicrophoneMessage("");
     setHasLoadedSample(false);
+    hasDetectedMicrophoneSignalRef.current = false;
+    canMeasureMicrophoneSignalRef.current = false;
+    setHasDetectedMicrophoneSignal(false);
+    setMeterLevels([0, 0, 0, 0, 0]);
     setFlowState("ready");
   }, [cancelPipeline, stopSamplePlayback]);
 
-  const keepShortRecording = useCallback(() => {
+  const retryRecording = useCallback(() => {
     if (!recording) {
       discardRecording();
       return;
@@ -815,7 +855,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
     void runAssessment(recording);
   }, [discardRecording, recording, runAssessment]);
 
-  const retryRecording = useCallback(() => {
+  const assessWithoutMeterSignal = useCallback(() => {
     if (!recording) {
       discardRecording();
       return;
@@ -974,6 +1014,11 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
               <span className="sr-only">{isStopping ? "Stopping recording" : "Stop recording"}</span>
             </button>
             <p className="recording-caption">Tap stop when {firstName(context.student.name)} has finished.</p>
+            <p className="gentle-notice">
+              {hasDetectedMicrophoneSignal
+                ? "Sound detected from the selected microphone."
+                : "Waiting for sound from the selected microphone."}
+            </p>
             {notice ? <p className="gentle-notice">{notice}</p> : null}
           </section>
         ) : null}
@@ -981,14 +1026,11 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
         {flowState === "short-recording" ? (
           <section className="decision-card" aria-labelledby="short-recording-title">
             <p className="decision-kicker">Short recording · {formatDuration(recording?.durationSec ?? 0)}</p>
-            <h2 id="short-recording-title">Keep or discard this recording?</h2>
-            <p>It was recorded in under five seconds. Keep it if {firstName(context.student.name)} finished reading.</p>
+            <h2 id="short-recording-title">Record a little longer</h2>
+            <p>Wait until the timer reaches 00:05 before stopping. This keeps the reading check reliable.</p>
             <div className="decision-actions">
-              <button className="primary-action" onClick={keepShortRecording} type="button">
-                Keep recording
-              </button>
-              <button className="secondary-action" onClick={discardRecording} type="button">
-                Discard
+              <button className="primary-action" onClick={discardRecording} type="button">
+                Record again
               </button>
             </div>
             {notice ? <p className="gentle-notice">{notice}</p> : null}
@@ -1035,6 +1077,27 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
           />
         ) : null}
 
+        {flowState === "no-microphone-signal" ? (
+          <AssessmentErrorCard
+            actions={
+              <>
+                <button className="primary-action" onClick={discardRecording} type="button">
+                  Record again
+                </button>
+                <button className="secondary-action" onClick={assessWithoutMeterSignal} type="button">
+                  Check anyway
+                </button>
+                <button className="secondary-action" onClick={loadSampleRecording} type="button">
+                  Use a sample
+                </button>
+              </>
+            }
+            body="Suno did not detect sound from the selected microphone. Choose the correct microphone in your browser's site settings, then record again."
+            detail={microphoneMessage || undefined}
+            title="No sound detected"
+          />
+        ) : null}
+
         {flowState === "upload-error" ? (
           <AssessmentErrorCard
             actions={
@@ -1056,6 +1119,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
               </button>
             }
             body={`The recording was too quiet or too short. Move closer to ${context.student.name} and try again.`}
+            detail="If this repeats, make sure “Sound detected” appears while the child speaks. If it does not, choose the correct microphone in your browser's site settings."
             title="Couldn't hear the reading"
           />
         ) : null}

@@ -16,8 +16,9 @@ export type TranscriptionGuardResult =
 const minimumDurationSec = 5;
 const minimumTranscriptWords = 3;
 const maximumWordsPerSecond = 5;
-const maximumHallucinatedBurstWordCount = 8;
-const maximumHallucinatedBurstCoverage = 0.3;
+const maximumHallucinatedTailWordCount = 4;
+const minimumHallucinatedTailStartRatio = 0.8;
+const maximumHallucinatedTailCoverage = 0.1;
 
 function spokenWords(transcription: TimestampedTranscription) {
   return transcription.words.filter((word) => word.word.trim().length > 0);
@@ -63,27 +64,27 @@ export function guardTranscriptionForAnalysis(
   }
 
   const speechWindow = activeSpeechWindow(words);
-  const speechSpanSec = speechWindow?.spanSec ?? null;
 
-  // Whisper can hallucinate a short phrase at the tail of an otherwise quiet
-  // clip. Treat that pattern as silence so the child is not told they read too
-  // fast when no reading was captured.
+  // Whisper's known silent-clip hallucination has at most four timestamped
+  // words compressed into the final sliver of an otherwise quiet recording.
+  // Keep this narrow signature for the approved near-silent fixture; do not
+  // reject a child merely because they began reading after a short pause.
   if (
-    wordCount <= maximumHallucinatedBurstWordCount &&
+    wordCount <= maximumHallucinatedTailWordCount &&
     speechWindow !== null &&
-    speechWindow.firstWordStart >= transcription.durationSec / 2 &&
-    speechWindow.spanSec / transcription.durationSec <= maximumHallucinatedBurstCoverage
+    speechWindow.firstWordStart >= transcription.durationSec * minimumHallucinatedTailStartRatio &&
+    speechWindow.spanSec / transcription.durationSec <= maximumHallucinatedTailCoverage
   ) {
     return {
       unassessable: true,
-      reason: "Couldn't hear the reading \u2014 try again closer to the child",
+      reason: "Couldn't hear the reading — try again closer to the child",
     };
   }
 
-  if (
-    wordCount / transcription.durationSec > maximumWordsPerSecond ||
-    (speechSpanSec !== null && wordCount / speechSpanSec > maximumWordsPerSecond)
-  ) {
+  // Keep this deliberately aligned with A-EC1's frozen rule: use the full
+  // recording duration. A genuine child may begin reading late or pause after
+  // a short passage, neither of which makes their recording silent.
+  if (wordCount / transcription.durationSec > maximumWordsPerSecond) {
     return {
       unassessable: true,
       reason: "The reading was too fast to assess — please try again.",

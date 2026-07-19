@@ -35,6 +35,12 @@ export async function POST(request: NextRequest) {
     const guard = guardTranscriptionForAnalysis(transcription);
 
     if (guard.unassessable) {
+      // Log only aggregate diagnostics: this helps distinguish microphone
+      // capture from an over-strict guard without printing a child's words.
+      console.info("Transcription rejected by the safety guard.", {
+        durationSec: Number(transcription.durationSec.toFixed(2)),
+        wordCount: transcription.words.filter((word) => word.word.trim().length > 0).length,
+      });
       return NextResponse.json(guard);
     }
 

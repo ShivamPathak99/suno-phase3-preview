@@ -46,66 +46,40 @@ verify(
   "A dense transcript must report the density guard.",
 );
 
-const compressedHallucination = guardTranscriptionForAnalysis({
-  durationSec: 5.92,
-  text: "hallucinated words from a quiet clip",
-  words: [
-    { word: "hallucinated", start: 5.28, end: 5.44 },
-    { word: "words", start: 5.44, end: 5.44 },
-    { word: "from", start: 5.44, end: 5.52 },
-    { word: "a", start: 5.52, end: 5.52 },
-    { word: "quiet", start: 5.52, end: 5.56 },
-  ],
-});
-
-verify(
-  compressedHallucination.unassessable,
-  "A short burst of hallucinated words in a quiet clip must be unassessable.",
-);
-verify(
-  compressedHallucination.reason === silentClip.reason,
-  "A compressed hallucination must report the silence guard.",
-);
-
-const lateHallucination = guardTranscriptionForAnalysis({
-  durationSec: 5.92,
-  text: "hallucinated words near the end of a quiet clip",
-  words: [
-    { word: "hallucinated", start: 4.04, end: 5.44 },
-    { word: "words", start: 5.44, end: 5.44 },
-    { word: "near", start: 5.44, end: 5.44 },
-    { word: "the", start: 5.44, end: 5.54 },
-    { word: "end", start: 5.54, end: 5.54 },
-    { word: "quiet", start: 5.54, end: 5.54 },
-  ],
-});
-
-verify(
-  lateHallucination.unassessable,
-  "A late short hallucination in a quiet clip must be unassessable.",
-);
-verify(
-  lateHallucination.reason === silentClip.reason,
-  "A late short hallucination must report the silence guard.",
-);
-
-const fastSpeechBurst = guardTranscriptionForAnalysis({
+const lateShortReading = guardTranscriptionForAnalysis({
   durationSec: 8,
-  text: "one two three",
+  text: "sun bus cup red",
   words: [
-    { word: "one", start: 3, end: 3.1 },
-    { word: "two", start: 3.1, end: 3.2 },
-    { word: "three", start: 3.2, end: 3.3 },
+    { word: "sun", start: 5, end: 5.2 },
+    { word: "bus", start: 5.25, end: 5.45 },
+    { word: "cup", start: 5.5, end: 5.7 },
+    { word: "red", start: 5.75, end: 5.95 },
   ],
 });
 
 verify(
-  fastSpeechBurst.unassessable,
-  "A dense speech burst must be unassessable even inside a long clip.",
+  !lateShortReading.unassessable,
+  "A clear short reading late in the clip must remain assessable.",
+);
+
+const tailHallucination = guardTranscriptionForAnalysis({
+  durationSec: 5.92,
+  text: "Thank you for watching.",
+  words: [
+    { word: "Thank", start: 5.28, end: 5.34 },
+    { word: "you", start: 5.34, end: 5.42 },
+    { word: "for", start: 5.42, end: 5.48 },
+    { word: "watching", start: 5.48, end: 5.56 },
+  ],
+});
+
+verify(
+  tailHallucination.unassessable,
+  "A known silent-clip tail hallucination must remain unassessable.",
 );
 verify(
-  fastSpeechBurst.reason === denseTranscript.reason,
-  "A genuine fast burst must report the speed guard rather than silence.",
+  tailHallucination.reason === silentClip.reason,
+  "A tail hallucination must report the silence guard.",
 );
 
 const assessableTranscript = guardTranscriptionForAnalysis({
@@ -121,5 +95,5 @@ const assessableTranscript = guardTranscriptionForAnalysis({
 verify(!assessableTranscript.unassessable, "A normal transcript must remain assessable.");
 
 console.log(
-  "Transcription guards passed: short, sparse, compressed, late, dense, burst, and normal cases.",
+  "Transcription guards passed: short, sparse, dense, late short reading, tail hallucination, and normal cases.",
 );
