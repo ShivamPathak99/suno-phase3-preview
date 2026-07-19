@@ -19,9 +19,23 @@ type MockPassage = {
 };
 
 export type MockAssessmentContext = {
+  /**
+   * UI-only stand-in for the draft ID returned by /api/analyze. Gate 3 will
+   * replace this with the real, stable assessmentId; confirmation never needs
+   * a separate ID.
+   */
+  assessmentId: string;
+  attemptNumber: number;
   passage: MockPassage;
   student: MockStudent;
 };
+
+function mockDraftAssessmentId(studentId: string) {
+  const studentSuffix = studentId.match(/([0-9a-f]{12})$/iu)?.[1];
+  const suffix = studentSuffix ?? "000000000000";
+
+  return "40000000-0000-4000-8000-" + suffix;
+}
 
 const students: MockStudent[] = [
   ["Aarti", "letter"],
@@ -72,6 +86,8 @@ export function getMockAssessmentContext(studentId: string): MockAssessmentConte
   const student = students.find((candidate) => candidate.id === studentId) ?? fallbackStudent;
 
   return {
+    assessmentId: mockDraftAssessmentId(student.id),
+    attemptNumber: 2,
     passage: mockPassage,
     student,
   };

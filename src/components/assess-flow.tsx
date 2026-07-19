@@ -504,9 +504,17 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
                 A {levelLabels[mockAnalysis.level].toLowerCase()}-level mock result is ready for teacher review.
               </p>
             </div>
-            <button className="secondary-action" onClick={discardRecording} type="button">
-              Record again
-            </button>
+            <div className="completion-actions">
+              <Link
+                className="primary-action completion-review"
+                href={"/assess/" + context.student.id + "?mock=confirm"}
+              >
+                Review result
+              </Link>
+              <button className="secondary-action" onClick={discardRecording} type="button">
+                Record again
+              </button>
+            </div>
           </section>
         ) : null}
 
