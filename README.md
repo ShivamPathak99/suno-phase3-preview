@@ -17,3 +17,7 @@ The C-1 foundation intentionally contains no live OpenAI or Supabase calls. Thos
 3. With `.env.local` configured, run `npm run seed`.
 
 The seed is idempotent and verifies that it created 20 demo students, 8 passages, and 20 confirmed assessments.
+
+## Audio storage
+
+Run `npm run setup:storage` to create or repair the public `audio` bucket. The command uses only the server-side Supabase key and is safe to re-run.
