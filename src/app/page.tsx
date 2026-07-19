@@ -7,6 +7,7 @@ type HomePageProps = {
   searchParams: Promise<{
     assessmentId?: string | string[];
     confirmed?: string | string[];
+    debug?: string | string[];
     level?: string | string[];
   }>;
 };
@@ -38,7 +39,9 @@ export default async function Home({ searchParams }: HomePageProps) {
         studentId,
       }
     : undefined;
-  const classroom = getMockClassroom(confirmation);
+  const dashboardDebug =
+    !confirmation && singleValue(query.debug) === "empty-student" ? "empty-student" : undefined;
+  const classroom = getMockClassroom(confirmation, dashboardDebug);
 
   return <ClassroomDashboard {...classroom} />;
 }

@@ -7,6 +7,7 @@ import {
   assessmentCaption,
   type DashboardStudent,
   type SuggestedGroup,
+  type UnassessedStudent,
 } from "@/lib/mock-dashboard";
 import type { ReadingLevel } from "@/lib/mock-assessment";
 
@@ -15,7 +16,7 @@ type ClassroomDashboardProps = {
   groups: SuggestedGroup[];
   levelCounts: Record<ReadingLevel, number>;
   students: DashboardStudent[];
-  unassessedStudents: DashboardStudent[];
+  unassessedStudents: UnassessedStudent[];
 };
 
 const levels: ReadingLevel[] = ["letter", "word", "paragraph", "story"];
@@ -128,6 +129,24 @@ function StudentCard({ student }: { student: DashboardStudent }) {
   );
 }
 
+function UnassessedStudentCard({ student }: { student: UnassessedStudent }) {
+  return (
+    <article className="student-card unassessed-student-card">
+      <div className="student-card-copy">
+        <h3 title={student.name}>{student.name}</h3>
+        <p>Not assessed yet</p>
+      </div>
+      <Link
+        aria-label={"Assess now: " + student.name}
+        className="unassessed-assess-button"
+        href={"/assess/" + student.id}
+      >
+        Assess now
+      </Link>
+    </article>
+  );
+}
+
 export function ClassroomDashboard({
   confirmedStudent,
   groups,
@@ -206,7 +225,7 @@ export function ClassroomDashboard({
             </div>
             <div className="unassessed-grid">
               {unassessedStudents.map((student) => (
-                <StudentCard key={student.id} student={student} />
+                <UnassessedStudentCard key={student.id} student={student} />
               ))}
             </div>
           </section>

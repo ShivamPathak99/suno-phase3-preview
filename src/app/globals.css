@@ -565,10 +565,34 @@ input:focus-visible {
 
 .error-card {
   border-color: #edc7c7;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .error-card h2 {
   color: var(--ink);
+}
+
+.error-card-copy {
+  min-width: 0;
+}
+
+.error-icon {
+  align-items: center;
+  background: #fff3f3;
+  border: 1px solid #edc7c7;
+  border-radius: 50%;
+  color: #b83434;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.error-icon svg {
+  height: 22px;
+  width: 22px;
 }
 
 .error-card .primary-action {
@@ -584,6 +608,11 @@ input:focus-visible {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 20px;
+}
+
+.error-card .error-actions {
+  grid-column: 1 / -1;
+  margin-top: 0;
 }
 
 .error-actions .secondary-action:disabled {
@@ -1546,6 +1575,29 @@ input:focus-visible {
   height: 21px;
   position: relative;
   width: 21px;
+}
+
+.unassessed-student-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.unassessed-assess-button {
+  align-items: center;
+  background: var(--board);
+  border-radius: 9px;
+  color: white;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 48px;
+  padding: 10px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.unassessed-assess-button:hover {
+  background: var(--board-dark);
 }
 
 .empty-level-card {

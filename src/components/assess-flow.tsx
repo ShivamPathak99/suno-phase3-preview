@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import type { ReadingAnalysis } from "@/lib/analysisSchema";
+import type { AssessDebugMode } from "@/lib/assess-debug";
 import type { MockAssessmentContext, ReadingLevel } from "@/lib/mock-assessment";
 
 type FlowState =
@@ -13,7 +14,11 @@ type FlowState =
   | "processing"
   | "complete"
   | "mic-error"
-  | "processing-error";
+  | "processing-error"
+  | "unassessable-quiet"
+  | "unassessable-too-fast"
+  | "unassessable-wrong-passage"
+  | "upload-error";
 
 type CapturedRecording = {
   durationSec: number;
@@ -26,6 +31,7 @@ type AudioContextWindow = Window & {
 
 type AssessFlowProps = {
   context: MockAssessmentContext;
+  debugMode?: AssessDebugMode;
   mockAnalysis: ReadingAnalysis;
 };
 
@@ -34,6 +40,25 @@ const minimumKeepDurationSeconds = 5;
 const stageDelayMs = 2_000;
 const stageTimeoutMs = 45_000;
 const sampleRecordingSource = "/sample-recordings/child-struggling.mp4";
+
+function initialFlowState(debugMode: AssessDebugMode | undefined): FlowState {
+  switch (debugMode) {
+    case "mic-denied":
+      return "mic-error";
+    case "upload-failed":
+      return "upload-error";
+    case "unassessable-quiet":
+      return "unassessable-quiet";
+    case "unassessable-too-fast":
+      return "unassessable-too-fast";
+    case "unassessable-wrong-passage":
+      return "unassessable-wrong-passage";
+    case "analysis-timeout":
+      return "processing-error";
+    default:
+      return "ready";
+  }
+}
 
 const processingStages = [
   "Uploading the recording",
@@ -113,8 +138,40 @@ function SpinnerIcon() {
   );
 }
 
-export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
-  const [flowState, setFlowState] = useState<FlowState>("ready");
+function ErrorIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 7.4v5.5M12 16.4h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+type AssessmentErrorCardProps = {
+  actions: ReactNode;
+  body: string;
+  detail?: string;
+  title: string;
+};
+
+function AssessmentErrorCard({ actions, body, detail, title }: AssessmentErrorCardProps) {
+  return (
+    <section aria-live="assertive" className="error-card" role="alert">
+      <span aria-hidden="true" className="error-icon">
+        <ErrorIcon />
+      </span>
+      <div className="error-card-copy">
+        <h2>{title}</h2>
+        <p>{body}</p>
+        {detail ? <p className="error-detail">{detail}</p> : null}
+      </div>
+      <div className="error-actions">{actions}</div>
+    </section>
+  );
+}
+
+export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps) {
+  const [flowState, setFlowState] = useState<FlowState>(() => initialFlowState(debugMode));
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isRequestingMicrophone, setIsRequestingMicrophone] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
@@ -425,6 +482,7 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
     setRecording(null);
     setElapsedSeconds(0);
     setNotice("");
+    setMicrophoneMessage("");
     setHasLoadedSample(false);
     setFlowState("ready");
   }, [stopSamplePlayback]);
@@ -627,29 +685,86 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
         ) : null}
 
         {flowState === "mic-error" ? (
-          <section className="error-card" aria-live="assertive" role="alert">
-            <h2>Microphone is blocked</h2>
-            <p>Allow the microphone in your browser&apos;s address bar, or use a sample recording.</p>
-            {microphoneMessage ? <p className="error-detail">{microphoneMessage}</p> : null}
-            <div className="error-actions">
+          <AssessmentErrorCard
+            actions={
+              <>
               <button className="primary-action" onClick={() => void startRecording()} type="button">
                 Try again
               </button>
               <button className="secondary-action" onClick={loadSampleRecording} type="button">
                 Use a sample
               </button>
-            </div>
-          </section>
+              </>
+            }
+            body="Allow the microphone in your browser's address bar, or use a sample recording."
+            detail={microphoneMessage || undefined}
+            title="Microphone is blocked"
+          />
+        ) : null}
+
+        {flowState === "upload-error" ? (
+          <AssessmentErrorCard
+            actions={
+              <button className="primary-action" onClick={() => void runMockProcessing()} type="button">
+                Retry upload
+              </button>
+            }
+            body={"Check the connection. The recording is saved \u2014 you won't need to record again."}
+            title="The recording didn't upload"
+          />
+        ) : null}
+
+        {flowState === "unassessable-quiet" ? (
+          <AssessmentErrorCard
+            actions={
+              <button className="primary-action" onClick={discardRecording} type="button">
+                Record again
+              </button>
+            }
+            body={`The recording was too quiet or too short. Move closer to ${context.student.name} and try again.`}
+            title="Couldn't hear the reading"
+          />
+        ) : null}
+
+        {flowState === "unassessable-too-fast" ? (
+          <AssessmentErrorCard
+            actions={
+              <button className="primary-action" onClick={discardRecording} type="button">
+                Record again
+              </button>
+            }
+            body={"The reading was too fast to assess \u2014 please try again."}
+            title="The reading was too fast to assess"
+          />
+        ) : null}
+
+        {flowState === "unassessable-wrong-passage" ? (
+          <AssessmentErrorCard
+            actions={
+              <>
+                <button className="primary-action" onClick={discardRecording} type="button">
+                  Record again
+                </button>
+                <Link className="secondary-action" href="/">
+                  Change passage
+                </Link>
+              </>
+            }
+            body="The reading didn't match the text on screen. Check the passage and try again."
+            title="That didn't match the passage"
+          />
         ) : null}
 
         {flowState === "processing-error" ? (
-          <section className="error-card" aria-live="assertive" role="alert">
-            <h2>This is taking too long</h2>
-            <p>Something&apos;s stuck on our side. Try once more.</p>
-            <button className="primary-action" onClick={() => void runMockProcessing()} type="button">
-              Retry
-            </button>
-          </section>
+          <AssessmentErrorCard
+            actions={
+              <button className="primary-action" onClick={() => void runMockProcessing()} type="button">
+                Retry
+              </button>
+            }
+            body="Something's stuck on our side. Try once more."
+            title="This is taking too long"
+          />
         ) : null}
       </section>
     </main>

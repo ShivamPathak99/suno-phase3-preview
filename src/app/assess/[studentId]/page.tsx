@@ -1,10 +1,11 @@
 import { AssessFlow } from "@/components/assess-flow";
 import { ConfirmAssessment } from "@/components/confirm-assessment";
+import { parseAssessDebugMode } from "@/lib/assess-debug";
 import { getMockAssessmentContext, mockReadingAnalysis } from "@/lib/mock-assessment";
 
 type AssessPageProps = {
   params: Promise<{ studentId: string }>;
-  searchParams: Promise<{ mock?: string | string[] }>;
+  searchParams: Promise<{ debug?: string | string[]; mock?: string | string[] }>;
 };
 
 /**
@@ -14,6 +15,7 @@ type AssessPageProps = {
 export default async function AssessPage({ params, searchParams }: AssessPageProps) {
   const [{ studentId }, query] = await Promise.all([params, searchParams]);
   const context = getMockAssessmentContext(studentId);
+  const debugMode = parseAssessDebugMode(query.debug);
 
   /**
    * The direct-entry mock route keeps B-EC10 testable without relying on
@@ -23,5 +25,12 @@ export default async function AssessPage({ params, searchParams }: AssessPagePro
     return <ConfirmAssessment context={context} mockAnalysis={mockReadingAnalysis} />;
   }
 
-  return <AssessFlow context={context} mockAnalysis={mockReadingAnalysis} />;
+  return (
+    <AssessFlow
+      context={context}
+      debugMode={debugMode}
+      key={context.student.id + ":" + (debugMode ?? "ready")}
+      mockAnalysis={mockReadingAnalysis}
+    />
+  );
 }

@@ -1,6 +1,7 @@
 import { readingLevels } from "@/lib/analysisSchema";
 import {
   mockDraftAssessmentId,
+  mockEmptyStudent,
   mockStudents,
   type ReadingLevel,
 } from "@/lib/mock-assessment";
@@ -24,12 +25,17 @@ export type SuggestedGroup = {
   number: number;
 };
 
+export type UnassessedStudent = {
+  id: string;
+  name: string;
+};
+
 export type MockClassroom = {
   confirmedStudent: DashboardStudent | null;
   groups: SuggestedGroup[];
   levelCounts: Record<ReadingLevel, number>;
   students: DashboardStudent[];
-  unassessedStudents: DashboardStudent[];
+  unassessedStudents: UnassessedStudent[];
 };
 
 export type MockConfirmation = {
@@ -37,6 +43,8 @@ export type MockConfirmation = {
   level: ReadingLevel;
   studentId: string;
 };
+
+export type MockDashboardDebug = "empty-student";
 
 const seedDate = new Date(Date.UTC(2026, 6, 18, 8, 0, 0));
 const mockConfirmationTimestamp = "2026-07-19T09:00:00.000Z";
@@ -71,14 +79,20 @@ function countLevels(students: DashboardStudent[]) {
  * Supabase. Gate 3 can replace this fixture with each student's latest
  * confirmed assessment while leaving the dashboard component unchanged.
  */
-export function getMockClassroom(confirmation?: MockConfirmation): MockClassroom {
+export function getMockClassroom(
+  confirmation?: MockConfirmation,
+  debug?: MockDashboardDebug,
+): MockClassroom {
   let confirmedStudent: DashboardStudent | null = null;
+  const emptyStudentIsConfirmed = confirmation?.studentId === mockEmptyStudent.id;
+  const assessedRoster = emptyStudentIsConfirmed ? [...mockStudents, mockEmptyStudent] : mockStudents;
 
-  const students = mockStudents.map((student, index) => {
+  const students = assessedRoster.map((student, index) => {
     const isNewlyConfirmed = confirmation?.studentId === student.id;
     const confirmedLevel = isNewlyConfirmed && confirmation ? confirmation.level : student.level;
+    const priorAssessmentCount = student.id === mockEmptyStudent.id ? 0 : 1;
     const dashboardStudent: DashboardStudent = {
-      assessmentCount: isNewlyConfirmed ? 2 : 1,
+      assessmentCount: isNewlyConfirmed ? priorAssessmentCount + 1 : priorAssessmentCount,
       assessmentId:
         isNewlyConfirmed && confirmation
           ? confirmation.assessmentId ?? mockDraftAssessmentId(student.id)
@@ -105,8 +119,12 @@ export function getMockClassroom(confirmation?: MockConfirmation): MockClassroom
       level,
       number: index + 1,
     }));
+  const unassessedStudents: UnassessedStudent[] =
+    debug === "empty-student" && !emptyStudentIsConfirmed
+      ? [{ id: mockEmptyStudent.id, name: mockEmptyStudent.name }]
+      : [];
 
-  return { confirmedStudent, groups, levelCounts, students, unassessedStudents: [] };
+  return { confirmedStudent, groups, levelCounts, students, unassessedStudents };
 }
 
 function ordinal(value: number) {

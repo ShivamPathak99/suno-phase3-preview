@@ -64,6 +64,13 @@ export const mockStudents: MockStudent[] = [
   name,
 }));
 
+/** Debug-only B-5 fixture; it is deliberately not part of the seeded roster. */
+export const mockEmptyStudent: MockStudent = {
+  id: "10000000-0000-4000-8000-000000000021",
+  level: "word",
+  name: "Meera",
+};
+
 const mockPassage: MockPassage = {
   body: "The cat sat on the brown mat.",
   id: "mock-word-passage",
@@ -83,11 +90,13 @@ const fallbackStudent: MockStudent = {
  * mock_analysis.json exactly. Gate 3 will replace both with the live read path.
  */
 export function getMockAssessmentContext(studentId: string): MockAssessmentContext {
-  const student = mockStudents.find((candidate) => candidate.id === studentId) ?? fallbackStudent;
+  const student =
+    mockStudents.find((candidate) => candidate.id === studentId) ??
+    (studentId === mockEmptyStudent.id ? mockEmptyStudent : fallbackStudent);
 
   return {
     assessmentId: mockDraftAssessmentId(student.id),
-    attemptNumber: 2,
+    attemptNumber: student.id === mockEmptyStudent.id ? 1 : 2,
     passage: mockPassage,
     student,
   };
