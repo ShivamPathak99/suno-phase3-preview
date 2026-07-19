@@ -33,6 +33,7 @@ const maximumRecordingSeconds = 120;
 const minimumKeepDurationSeconds = 5;
 const stageDelayMs = 2_000;
 const stageTimeoutMs = 45_000;
+const sampleRecordingSource = "/sample-recordings/child-struggling.mp4";
 
 const processingStages = [
   "Uploading the recording",
@@ -122,18 +123,22 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
   const [processingStep, setProcessingStep] = useState(0);
   const [recording, setRecording] = useState<CapturedRecording | null>(null);
   const [meterLevels, setMeterLevels] = useState([0.18, 0.28, 0.42, 0.28, 0.18]);
+  const [hasLoadedSample, setHasLoadedSample] = useState(false);
 
   const autoStopTimerRef = useRef<number | null>(null);
   const elapsedSecondsRef = useRef(0);
   const meterTimerRef = useRef<number | null>(null);
   const microphoneRequestRef = useRef(0);
   const mockRunRef = useRef(0);
+  const sampleRunRef = useRef(0);
+  const sampleProcessingRef = useRef(false);
   const recordingSessionRef = useRef(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recorderChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const sampleAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const clearRecordingResources = useCallback((invalidateRecorder = false) => {
     if (recordingTimerRef.current !== null) {
@@ -171,6 +176,23 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
     }
   }, []);
 
+  const stopSamplePlayback = useCallback(() => {
+    const sampleAudio = sampleAudioRef.current;
+
+    if (!sampleAudio) {
+      return;
+    }
+
+    sampleAudio.pause();
+
+    try {
+      sampleAudio.currentTime = 0;
+    } catch {
+      // A browser can reject a seek before metadata is available. Pausing is
+      // still sufficient cleanup for an interrupted sample preview.
+    }
+  }, []);
+
   const runMockProcessing = useCallback(async () => {
     const runId = mockRunRef.current + 1;
     mockRunRef.current = runId;
@@ -189,10 +211,11 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
       setFlowState("complete");
     } catch {
       if (mockRunRef.current === runId) {
+        stopSamplePlayback();
         setFlowState("processing-error");
       }
     }
-  }, []);
+  }, [stopSamplePlayback]);
 
   const stopRecording = useCallback(
     (stoppedAtLimit = false) => {
@@ -242,6 +265,10 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
       return;
     }
 
+    sampleRunRef.current += 1;
+    sampleProcessingRef.current = false;
+    stopSamplePlayback();
+    setHasLoadedSample(false);
     setIsRequestingMicrophone(true);
     setMicrophoneMessage("");
     setNotice("");
@@ -341,15 +368,66 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
       setMicrophoneMessage("Allow microphone access in your browser, then try again.");
       setFlowState("mic-error");
     }
-  }, [clearRecordingResources, isRequestingMicrophone, runMockProcessing, startAudioMeter, stopRecording]);
+  }, [
+    clearRecordingResources,
+    isRequestingMicrophone,
+    runMockProcessing,
+    startAudioMeter,
+    stopRecording,
+    stopSamplePlayback,
+  ]);
+
+  const loadSampleRecording = useCallback(() => {
+    if (sampleProcessingRef.current) {
+      return;
+    }
+
+    const sampleRunId = sampleRunRef.current + 1;
+    sampleRunRef.current = sampleRunId;
+    sampleProcessingRef.current = true;
+    microphoneRequestRef.current += 1;
+    clearRecordingResources(true);
+    setIsRequestingMicrophone(false);
+    setIsStopping(false);
+    setMicrophoneMessage("");
+    setNotice("Playing a sample child recording.");
+    setRecording(null);
+    setElapsedSeconds(0);
+    setHasLoadedSample(true);
+
+    const sampleAudio = sampleAudioRef.current;
+
+    if (sampleAudio) {
+      try {
+        sampleAudio.currentTime = 0;
+        void sampleAudio.play().catch(() => {
+          if (sampleRunRef.current === sampleRunId) {
+            setNotice("Processing the sample recording.");
+          }
+        });
+      } catch {
+        setNotice("Processing the sample recording.");
+      }
+    }
+
+    void runMockProcessing().finally(() => {
+      if (sampleRunRef.current === sampleRunId) {
+        sampleProcessingRef.current = false;
+      }
+    });
+  }, [clearRecordingResources, runMockProcessing]);
 
   const discardRecording = useCallback(() => {
     mockRunRef.current += 1;
+    sampleRunRef.current += 1;
+    sampleProcessingRef.current = false;
+    stopSamplePlayback();
     setRecording(null);
     setElapsedSeconds(0);
     setNotice("");
+    setHasLoadedSample(false);
     setFlowState("ready");
-  }, []);
+  }, [stopSamplePlayback]);
 
   const keepShortRecording = useCallback(() => {
     if (!recording) {
@@ -365,9 +443,12 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
       mockRunRef.current += 1;
       microphoneRequestRef.current += 1;
       recordingSessionRef.current += 1;
+      sampleRunRef.current += 1;
+      sampleProcessingRef.current = false;
+      stopSamplePlayback();
       clearRecordingResources(true);
     },
-    [clearRecordingResources],
+    [clearRecordingResources, stopSamplePlayback],
   );
 
   const passageIsDimmed = flowState === "processing";
@@ -427,6 +508,28 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
           ) : null}
         </div>
 
+        <section
+          aria-live="polite"
+          className={`sample-audio-player${hasLoadedSample ? " is-visible" : ""}`}
+        >
+          <p className="sample-audio-title">Sample child recording</p>
+          <p className="sample-audio-note">Demo playback — the result that follows is a fixed practice result.</p>
+          <audio
+            aria-label="Sample child recording"
+            controls
+            onError={() => {
+              if (hasLoadedSample) {
+                setNotice("The sample could not play here. The demo is still processing its mock result.");
+              }
+            }}
+            preload="metadata"
+            ref={sampleAudioRef}
+            src={sampleRecordingSource}
+          >
+            Your browser cannot play this sample recording.
+          </audio>
+        </section>
+
         {flowState === "ready" ? (
           <section className="recording-control" aria-label="Start recording">
             <button
@@ -443,8 +546,13 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
                 ? "Opening the microphone…"
                 : `Hand the phone to ${firstName(context.student.name)}, then tap`}
             </p>
-            <button className="quiet-action" disabled type="button">
-              No mic? Use a sample recording
+            <button
+              className="quiet-action"
+              disabled={isRequestingMicrophone}
+              onClick={loadSampleRecording}
+              type="button"
+            >
+              No mic? Try a sample child recording
             </button>
             <Link className="change-passage" href="/">
               Change passage
@@ -527,7 +635,7 @@ export function AssessFlow({ context, mockAnalysis }: AssessFlowProps) {
               <button className="primary-action" onClick={() => void startRecording()} type="button">
                 Try again
               </button>
-              <button className="secondary-action" disabled type="button">
+              <button className="secondary-action" onClick={loadSampleRecording} type="button">
                 Use a sample
               </button>
             </div>
