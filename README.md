@@ -21,3 +21,36 @@ The seed is idempotent and verifies that it created 20 demo students, 8 passages
 ## Audio storage
 
 Run `npm run setup:storage` to create or repair the public `audio` bucket. The command uses only the server-side Supabase key and is safe to re-run.
+
+## Golden-set harness
+
+Run `npm run test:golden` to validate the harness contract without any network
+or audio upload. Curated fixtures and their expected outcomes live in
+[`sample-data/golden-set.json`](./sample-data/golden-set.json); see
+[`sample-data/golden/README.md`](./sample-data/golden/README.md) before adding
+a recording.
+
+With all seven approved fixtures present, `npm run golden` starts a local API
+server, runs every fixture through the signed upload, transcription, and
+analysis routes, prints a side-by-side table, and cleans up the temporary
+storage objects and draft assessments. Use
+`npm run golden -- --base-url https://your-deployment.example` to exercise a
+deployment you control, `--isolated-local` to build and run a separate local
+production server, or `--include-optional` to run the separate Hindi quality
+gate. The command does not automatically reuse an already-running server: set
+an explicit `--base-url` only when you have verified that endpoint. A `REVIEW`
+row means the fixture needs a human baseline; it returns a non-zero exit code
+until the manifest has deterministic expectations. Until the curated fixtures
+are added, the command intentionally stops before making network calls and
+lists the missing files.
+
+## Pipeline notes
+
+The pipeline makes two deliberate safety choices: it rejects short, sparse, or
+implausibly fast transcripts before GPT-5.6 is called, and it keeps the
+teacher-facing analysis object separate from the draft `assessmentId`. The
+golden harness exercises the frozen HTTP boundaries rather than internal
+helpers, but only processes curated recordings explicitly approved for OpenAI
+processing, temporary public storage, and repository visibility. Its temporary
+objects and unconfirmed drafts are matched to the individual run before
+cleanup.

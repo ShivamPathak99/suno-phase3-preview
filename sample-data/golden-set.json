@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "child-decent",
+      "label": "Child - decent reader",
+      "language": "en",
+      "studentId": "10000000-0000-4000-8000-000000000019",
+      "passageId": "20000000-0000-4000-8000-000000000007",
+      "file": {
+        "path": "golden/01-child-decent.mp4",
+        "contentType": "video/mp4"
+      },
+      "expected": {
+        "outcome": "assessment",
+        "manualReviewRequired": true,
+        "notes": "Human review: a decently fluent child reading the assigned English story should produce a usable assessment."
+      }
+    },
+    {
+      "id": "child-struggling",
+      "label": "Child - struggling reader",
+      "language": "en",
+      "studentId": "10000000-0000-4000-8000-000000000006",
+      "passageId": "20000000-0000-4000-8000-000000000003",
+      "file": {
+        "path": "golden/02-child-struggling.mp4",
+        "contentType": "video/mp4"
+      },
+      "expected": {
+        "outcome": "assessment",
+        "minErrorCount": 1,
+        "manualReviewRequired": true,
+        "notes": "Human review: at least one known decoding error should be visible; tune only against a named mismatch."
+      }
+    },
+    {
+      "id": "child-noisy",
+      "label": "Child - noisy background",
+      "language": "en",
+      "studentId": "10000000-0000-4000-8000-000000000012",
+      "passageId": "20000000-0000-4000-8000-000000000005",
+      "file": {
+        "path": "golden/03-child-noisy.mp4",
+        "contentType": "video/mp4"
+      },
+      "expected": {
+        "outcome": "assessment",
+        "manualReviewRequired": true,
+        "notes": "Human review: unrelated classroom noise must not become passage errors."
+      }
+    },
+    {
+      "id": "adult-fluent",
+      "label": "Adult - fluent",
+      "language": "en",
+      "studentId": "10000000-0000-4000-8000-000000000020",
+      "passageId": "20000000-0000-4000-8000-000000000007",
+      "file": {
+        "path": "golden/04-adult-fluent.mp4",
+        "contentType": "video/mp4"
+      },
+      "expected": {
+        "outcome": "assessment",
+        "expectedLevels": ["story"],
+        "minAccuracyPct": 95,
+        "maxErrorCount": 2,
+        "notes": "A fluent adult reading the assigned story should be story level and near-perfect."
+      }
+    },
+    {
+      "id": "adult-scripted-errors",
+      "label": "Adult - scripted errors",
+      "language": "en",
+      "studentId": "10000000-0000-4000-8000-000000000013",
+      "passageId": "20000000-0000-4000-8000-000000000005",
+      "file": {
+        "path": "golden/05-adult-scripted-errors.mp4",
+        "contentType": "video/mp4"
+      },
+      "expected": {
+        "outcome": "assessment",
+        "minErrorCount": 2,
+        "expectedWordStatuses": [
+          {
+            "passageWordIndex": 1,
+            "status": "substituted"
+          },
+          {
+            "passageWordIndex": 5,
+            "status": "skipped"
+          },
+          {
+            "passageWordIndex": 13,
+            "status": "correct"
+          },
+          {
+            "passageWordIndex": 17,
+            "status": "correct"
+          }
+        ],
+        "notes": "Script this fixture against The School Garden: say 'home' for school (#2), skip small (#6), self-correct tap (#14), and repeat plant (#18). The final self-corrected and repeated words must remain correct."
+      }
+    },
+    {
+      "id": "near-silent",
+      "label": "Near-silent - 4 seconds",
+      "language": "en",
+      "studentId": "10000000-0000-4000-8000-000000000001",
+      "passageId": "20000000-0000-4000-8000-000000000003",
+      "file": {
+        "path": "golden/06-near-silent-4s.mp4",
+        "contentType": "video/mp4"
+      },
+      "expected": {
+        "outcome": "unassessable",
+        "stage": "transcription",
+        "reason": "Couldn't hear the reading \u2014 try again closer to the child",
+        "notes": "The four-second near-silent clip must never reach GPT analysis."
+      }
+    },
+    {
+      "id": "wrong-passage",
+      "label": "Wrong passage",
+      "language": "en",
+      "studentId": "10000000-0000-4000-8000-000000000002",
+      "passageId": "20000000-0000-4000-8000-000000000007",
+      "file": {
+        "path": "golden/07-wrong-passage.mp4",
+        "contentType": "video/mp4"
+      },
+      "expected": {
+        "outcome": "unassessable",
+        "stage": "analysis",
+        "reason": "reading did not match the passage",
+        "notes": "This recording must contain more than ten words from a different passage."
+      }
+    }
+  ],
+  "optionalCases": [
+    {
+      "id": "hindi-quality",
+      "label": "Hindi quality gate",
+      "language": "hi",
+      "studentId": "10000000-0000-4000-8000-000000000018",
+      "passageId": "20000000-0000-4000-8000-000000000008",
+      "file": {
+        "path": "golden/08-hindi-quality.mp4",
+        "contentType": "video/mp4"
+      },
+      "expected": {
+        "outcome": "assessment",
+        "expectedLevels": ["story"],
+        "minAccuracyPct": 85,
+        "maxErrorCount": 5,
+        "notes": "Run with --include-optional. This should be a fluent Hindi story reading; enable Hindi in the demo only if this quality gate passes."
+      }
+    }
+  ]
+}
