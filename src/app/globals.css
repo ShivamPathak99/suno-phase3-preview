@@ -991,6 +991,13 @@ input:focus-visible {
   border-color: var(--board);
 }
 
+.confirmation-error {
+  color: var(--error);
+  font-size: 14px;
+  line-height: 20px;
+  margin: -4px 0 0;
+}
+
 .confirm-rerecord {
   justify-self: start;
   padding-left: 0;

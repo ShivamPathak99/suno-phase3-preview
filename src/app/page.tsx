@@ -1,23 +1,18 @@
 import { ClassroomDashboard } from "@/components/classroom-dashboard";
-import { readingLevels } from "@/lib/analysisSchema";
-import { getMockClassroom, type MockConfirmation } from "@/lib/mock-dashboard";
-import type { ReadingLevel } from "@/lib/mock-assessment";
+import { getLiveClassroom } from "@/lib/live-classroom";
+import { getMockClassroom } from "@/lib/mock-dashboard";
+
+export const dynamic = "force-dynamic";
 
 type HomePageProps = {
   searchParams: Promise<{
     assessmentId?: string | string[];
-    confirmed?: string | string[];
     debug?: string | string[];
-    level?: string | string[];
   }>;
 };
 
 function singleValue(value: string | string[] | undefined) {
   return typeof value === "string" ? value : undefined;
-}
-
-function isReadingLevel(value: string | undefined): value is ReadingLevel {
-  return value !== undefined && (readingLevels as readonly string[]).includes(value);
 }
 
 function isUuid(value: string | undefined) {
@@ -30,18 +25,14 @@ function isUuid(value: string | undefined) {
 export default async function Home({ searchParams }: HomePageProps) {
   const query = await searchParams;
   const assessmentId = singleValue(query.assessmentId);
-  const studentId = singleValue(query.confirmed);
-  const level = singleValue(query.level);
-  const confirmation: MockConfirmation | undefined = studentId && isReadingLevel(level)
-    ? {
-        assessmentId: isUuid(assessmentId) ? assessmentId : undefined,
-        level,
-        studentId,
-      }
-    : undefined;
-  const dashboardDebug =
-    !confirmation && singleValue(query.debug) === "empty-student" ? "empty-student" : undefined;
-  const classroom = getMockClassroom(confirmation, dashboardDebug);
+
+  // Preserve the explicit B-5 empty-state fixture; all ordinary dashboard
+  // routes now reflect the persisted teacher-confirmed assessment records.
+  if (singleValue(query.debug) === "empty-student") {
+    return <ClassroomDashboard {...getMockClassroom(undefined, "empty-student")} />;
+  }
+
+  const classroom = await getLiveClassroom(isUuid(assessmentId) ? assessmentId : undefined);
 
   return <ClassroomDashboard {...classroom} />;
 }

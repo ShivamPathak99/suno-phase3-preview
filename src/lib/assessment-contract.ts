@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ReadingAnalysis } from "@/lib/analysisSchema";
+import { type ReadingAnalysis, wordStatuses } from "@/lib/analysisSchema";
 
 export const timestampedWordSchema = z
   .object({
@@ -21,6 +21,8 @@ export const timestampedTranscriptSchema = z
     words: z.array(timestampedWordSchema),
   })
   .strict();
+
+export type TimestampedTranscript = z.infer<typeof timestampedTranscriptSchema>;
 
 /**
  * Frozen A-5 request contract. The server loads passage text from passageId;
@@ -44,4 +46,50 @@ export type AnalyzeRequest = z.infer<typeof analyzeRequestSchema>;
 export type AnalyzeResponse = {
   assessmentId: string;
   analysis: ReadingAnalysis;
+};
+
+const assessmentWordOverrideSchema = z
+  .object({
+    heard_as: z.string().trim().min(1).max(120).nullable(),
+    passage_word_index: z.number().int().nonnegative(),
+    status: z.enum(wordStatuses),
+  })
+  .strict();
+
+/**
+ * Frozen draft-to-confirm input. The client can only amend word markings;
+ * accuracy, speed, and the level are recomputed by the server.
+ */
+export const confirmAssessmentRequestSchema = z
+  .object({
+    overrides: z.array(assessmentWordOverrideSchema),
+  })
+  .strict()
+  .superRefine(({ overrides }, context) => {
+    const seenIndexes = new Set<number>();
+
+    overrides.forEach((override, index) => {
+      if (seenIndexes.has(override.passage_word_index)) {
+        context.addIssue({
+          code: "custom",
+          message: "Each passage word can be overridden only once.",
+          path: ["overrides", index, "passage_word_index"],
+        });
+      }
+      seenIndexes.add(override.passage_word_index);
+    });
+  });
+
+export type AssessmentWordOverride = z.infer<typeof assessmentWordOverrideSchema>;
+export type ConfirmAssessmentRequest = z.infer<typeof confirmAssessmentRequestSchema>;
+
+export type ConfirmAssessmentResponse = {
+  assessment: {
+    accuracy_pct: number;
+    analysis: ReadingAnalysis;
+    id: string;
+    level: ReadingAnalysis["level"];
+    studentId: string;
+    wcpm: number;
+  };
 };

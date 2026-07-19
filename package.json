@@ -14,6 +14,8 @@
     "test:guards": "node --import tsx scripts/test-transcription-guard.ts",
     "verify:guards": "node --env-file=.env.local --import tsx scripts/verify-transcription-guard-live.ts",
     "test:analysis": "node --import tsx scripts/test-analysis-contract.ts",
+    "test:confirmation": "node --import tsx scripts/test-confirmation-contract.ts",
+    "verify:confirmation": "node --env-file=.env.local --import tsx scripts/verify-confirm-live.ts",
     "verify:analysis": "node --env-file=.env.local --import tsx scripts/verify-analysis-live.ts",
     "test:golden": "node --import tsx scripts/test-golden-harness.ts",
     "golden": "node --env-file=.env.local --import tsx scripts/golden.ts",

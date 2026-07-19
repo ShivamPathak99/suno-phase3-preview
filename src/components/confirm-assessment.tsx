@@ -13,7 +13,8 @@ import {
 } from "react";
 
 import type { ReadingAnalysis } from "@/lib/analysisSchema";
-import type { MockAssessmentContext, ReadingLevel } from "@/lib/mock-assessment";
+import type { ConfirmAssessmentResponse } from "@/lib/assessment-contract";
+import type { AssessmentContext, ReadingLevel } from "@/lib/assessment-types";
 
 type WordStatus = ReadingAnalysis["words"][number]["status"];
 
@@ -33,8 +34,11 @@ type PassageFragment =
   | { index: number; kind: "word"; prefix: string; suffix: string; value: string };
 
 type ConfirmAssessmentProps = {
-  context: MockAssessmentContext;
-  mockAnalysis: ReadingAnalysis;
+  analysis: ReadingAnalysis;
+  assessmentId: string;
+  context: AssessmentContext;
+  /** The explicit visual fixture keeps its no-network behaviour. */
+  isMock?: boolean;
 };
 
 const levelLabels: Record<ReadingLevel, string> = {
@@ -149,22 +153,21 @@ function formatMetric(value: number) {
 
 function displaySummary(summary: string, studentName: string) {
   /**
-   * The frozen fixture names and genders Ravi. This display adapter keeps the
-   * mock analysis object immutable while making the seeded demo roster read
-   * naturally for every child.
+   * Some historical fixture output names Ravi. Keep real student names
+   * natural if an old draft is ever opened for review.
    */
   return summary.replace(/\bRavi\b/gu, studentName).replace(/\bHe\b/gu, "The student");
 }
 
-export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentProps) {
+export function ConfirmAssessment({ analysis, assessmentId, context, isMock = false }: ConfirmAssessmentProps) {
   const [overrides, setOverrides] = useState<Record<number, WordOverride>>({});
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [heardAsDraft, setHeardAsDraft] = useState("");
   const [editorPosition, setEditorPosition] = useState<EditorPosition | null>(null);
   const [overrideNotice, setOverrideNotice] = useState("");
   const [isConfirming, setIsConfirming] = useState(false);
+  const [confirmationError, setConfirmationError] = useState("");
 
-  const confirmTimerRef = useRef<number | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
@@ -172,14 +175,14 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
   const fragments = useMemo(() => splitPassage(context.passage.body), [context.passage.body]);
   const reviewedWords = useMemo(
     () =>
-      mockAnalysis.words.map((word, index) => {
+      analysis.words.map((word, index) => {
         const override = overrides[index];
         return override ? { ...word, ...override } : word;
       }),
-    [mockAnalysis.words, overrides],
+    [analysis.words, overrides],
   );
   const selectedWord = selectedIndex === null ? null : reviewedWords[selectedIndex] ?? null;
-  const levelClassName = "level-" + mockAnalysis.level;
+  const levelClassName = "level-" + analysis.level;
   const editorStyle = editorPosition
     ? ({
         "--editor-left": editorPosition.left + "px",
@@ -246,23 +249,68 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
     [applyOverride, heardAsDraft],
   );
 
-  const confirmLevel = useCallback(() => {
+  const confirmLevel = useCallback(async () => {
     if (isConfirming) {
       return;
     }
 
     setIsConfirming(true);
-    confirmTimerRef.current = window.setTimeout(() => {
+    setConfirmationError("");
+
+    if (isMock) {
       router.push(
         "/?confirmed=" +
           encodeURIComponent(context.student.id) +
           "&level=" +
-          encodeURIComponent(mockAnalysis.level) +
+          encodeURIComponent(analysis.level) +
           "&assessmentId=" +
-          encodeURIComponent(context.assessmentId),
+          encodeURIComponent(assessmentId),
       );
-    }, 250);
-  }, [context.assessmentId, context.student.id, isConfirming, mockAnalysis.level, router]);
+      return;
+    }
+
+    const overridePayload = Object.entries(overrides)
+      .map(([index, override]) => ({
+        ...override,
+        passage_word_index: Number(index),
+      }))
+      .sort((left, right) => left.passage_word_index - right.passage_word_index);
+
+    try {
+      const response = await fetch(
+        "/api/assessments/" + encodeURIComponent(assessmentId) + "/confirm",
+        {
+          body: JSON.stringify({ overrides: overridePayload }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | ConfirmAssessmentResponse
+        | { error?: string }
+        | null;
+
+      if (
+        !response.ok ||
+        !payload ||
+        !("assessment" in payload) ||
+        typeof payload.assessment.id !== "string"
+      ) {
+        throw new Error(
+          payload && "error" in payload && typeof payload.error === "string"
+            ? payload.error
+            : "Couldn't confirm the assessment. Please try again.",
+        );
+      }
+
+      router.push("/?assessmentId=" + encodeURIComponent(payload.assessment.id));
+    } catch (error) {
+      setConfirmationError(
+        error instanceof Error ? error.message : "Couldn't confirm the assessment. Please try again.",
+      );
+      setIsConfirming(false);
+    }
+  }, [analysis.level, assessmentId, context.student.id, isConfirming, isMock, overrides, router]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -314,20 +362,11 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
     };
   }, [closeEditor, selectedIndex]);
 
-  useEffect(
-    () => () => {
-      if (confirmTimerRef.current !== null) {
-        window.clearTimeout(confirmTimerRef.current);
-      }
-    },
-    [],
-  );
-
   return (
     <main
       className="assessment-page confirmation-page"
-      data-assessment-id={context.assessmentId}
-      data-mock-only="true"
+      data-assessment-id={assessmentId}
+      data-mock-only={isMock ? "true" : "false"}
     >
       <section className="assessment-shell confirm-shell" aria-labelledby="confirm-title">
         <header className="confirm-header">
@@ -441,34 +480,34 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
             <section className={"level-result-card " + levelClassName}>
               <div className="level-result-heading">
                 <span aria-hidden="true" className="level-result-icon">
-                  <LevelMark level={mockAnalysis.level} />
+                  <LevelMark level={analysis.level} />
                 </span>
                 <div>
                   <p>Suggested reading level</p>
-                  <h2>{levelLabels[mockAnalysis.level]} level</h2>
+                  <h2>{levelLabels[analysis.level]} level</h2>
                 </div>
               </div>
               <dl className="result-metrics">
                 <div>
                   <dt>Speed</dt>
-                  <dd>{formatMetric(mockAnalysis.wcpm)} WCPM</dd>
+                  <dd>{formatMetric(analysis.wcpm)} WCPM</dd>
                 </div>
                 <div>
                   <dt>Accuracy</dt>
-                  <dd>{formatMetric(mockAnalysis.accuracy_pct)}%</dd>
+                  <dd>{formatMetric(analysis.accuracy_pct)}%</dd>
                 </div>
               </dl>
             </section>
 
             <blockquote className="teacher-summary">
-              “{displaySummary(mockAnalysis.summary_for_teacher, context.student.name)}”
+              “{displaySummary(analysis.summary_for_teacher, context.student.name)}”
             </blockquote>
 
             <button
               aria-busy={isConfirming}
               className="primary-action confirm-level-action"
               disabled={isConfirming}
-              onClick={confirmLevel}
+              onClick={() => void confirmLevel()}
               type="button"
             >
               {isConfirming ? (
@@ -479,6 +518,11 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
                 </>
               )}
             </button>
+            {confirmationError ? (
+              <p className="confirmation-error" role="alert">
+                {confirmationError}
+              </p>
+            ) : null}
             <Link className="quiet-action confirm-rerecord" href={"/assess/" + context.student.id}>
               Re-record
             </Link>

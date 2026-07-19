@@ -1,36 +1,109 @@
+import { notFound } from "next/navigation";
+
 import { AssessFlow } from "@/components/assess-flow";
 import { ConfirmAssessment } from "@/components/confirm-assessment";
 import { parseAssessDebugMode } from "@/lib/assess-debug";
-import { getMockAssessmentContext, mockReadingAnalysis } from "@/lib/mock-assessment";
+import {
+  loadLiveAssessmentContext,
+  loadLiveDraftAssessment,
+} from "@/lib/live-assessment-context";
+import {
+  getMockAssessmentContext,
+  mockEmptyStudent,
+  mockReadingAnalysis,
+} from "@/lib/mock-assessment";
+
+export const dynamic = "force-dynamic";
 
 type AssessPageProps = {
   params: Promise<{ studentId: string }>;
-  searchParams: Promise<{ debug?: string | string[]; mock?: string | string[] }>;
+  searchParams: Promise<{
+    assessmentId?: string | string[];
+    debug?: string | string[];
+    mock?: string | string[];
+  }>;
 };
 
+function singleValue(value: string | string[] | undefined) {
+  return typeof value === "string" ? value : undefined;
+}
+
+function isUuid(value: string | undefined) {
+  return (
+    value !== undefined &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(value)
+  );
+}
+
 /**
- * B-1 is intentionally self-contained and mock-only. The Gate 3 swap will
- * replace this context with a live student/passage read and pipeline result.
+ * Gate 3: normal routes resolve a real student and UUID-backed passage on the
+ * server. The explicit mock query remains only as a visual/debug fixture.
  */
 export default async function AssessPage({ params, searchParams }: AssessPageProps) {
   const [{ studentId }, query] = await Promise.all([params, searchParams]);
-  const context = getMockAssessmentContext(studentId);
-  const debugMode = parseAssessDebugMode(query.debug);
+  const debugMode = parseAssessDebugMode(singleValue(query.debug));
 
-  /**
-   * The direct-entry mock route keeps B-EC10 testable without relying on
-   * browser-only B-1 state. Gate 3 will pass a real draft instead.
-   */
-  if (query.mock === "confirm") {
-    return <ConfirmAssessment context={context} mockAnalysis={mockReadingAnalysis} />;
+  if (singleValue(query.mock) === "confirm") {
+    const mockContext = getMockAssessmentContext(studentId);
+
+    return (
+      <ConfirmAssessment
+        analysis={mockReadingAnalysis}
+        assessmentId={mockContext.assessmentId}
+        context={mockContext}
+        isMock
+      />
+    );
   }
 
-  return (
-    <AssessFlow
-      context={context}
-      debugMode={debugMode}
-      key={context.student.id + ":" + (debugMode ?? "ready")}
-      mockAnalysis={mockReadingAnalysis}
-    />
-  );
+  const requestedAssessmentId = singleValue(query.assessmentId);
+  if (requestedAssessmentId !== undefined) {
+    if (!isUuid(requestedAssessmentId)) {
+      notFound();
+    }
+
+    const draft = await loadLiveDraftAssessment(studentId, requestedAssessmentId);
+
+    if (!draft) {
+      notFound();
+    }
+
+    return (
+      <ConfirmAssessment
+        analysis={draft.analysis}
+        assessmentId={draft.assessmentId}
+        context={draft.context}
+      />
+    );
+  }
+
+  const context = await loadLiveAssessmentContext(studentId);
+
+  if (context) {
+    return (
+      <AssessFlow
+        context={context}
+        debugMode={debugMode}
+        key={context.student.id + ":" + (debugMode ?? "ready")}
+      />
+    );
+  }
+
+  // Retain the B-5 empty-class/debug fixture without making the ordinary
+  // seeded classroom use mock passage IDs or mock analysis results.
+  if (studentId === "mock-reader" || studentId === mockEmptyStudent.id) {
+    const mockContext = getMockAssessmentContext(studentId);
+
+    return (
+      <AssessFlow
+        context={mockContext}
+        debugMode={debugMode}
+        key={mockContext.student.id + ":mock:" + (debugMode ?? "ready")}
+        mode="mock"
+        mockAnalysis={mockReadingAnalysis}
+      />
+    );
+  }
+
+  notFound();
 }

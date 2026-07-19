@@ -1,11 +1,13 @@
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { type MutableRefObject, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
-import type { ReadingAnalysis } from "@/lib/analysisSchema";
+import { analysisSchema, type ReadingAnalysis } from "@/lib/analysisSchema";
+import type { AnalyzeResponse, TimestampedTranscript } from "@/lib/assessment-contract";
 import type { AssessDebugMode } from "@/lib/assess-debug";
-import type { MockAssessmentContext, ReadingLevel } from "@/lib/mock-assessment";
+import type { AssessmentContext, ReadingLevel } from "@/lib/assessment-types";
+import { uploadAudioFile } from "@/lib/upload-audio";
 
 type FlowState =
   | "ready"
@@ -29,17 +31,31 @@ type AudioContextWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
 
-type AssessFlowProps = {
-  context: MockAssessmentContext;
-  debugMode?: AssessDebugMode;
-  mockAnalysis: ReadingAnalysis;
+type ApiResponse = {
+  ok: boolean;
+  payload: unknown;
 };
+
+type AssessFlowProps = {
+  context: AssessmentContext;
+  debugMode?: AssessDebugMode;
+  /** The explicit fixture path remains available for visual/debug checks only. */
+  mode?: "live" | "mock";
+  mockAnalysis?: ReadingAnalysis;
+};
+
+class PipelineTimeoutError extends Error {
+  constructor() {
+    super("This step took too long.");
+  }
+}
 
 const maximumRecordingSeconds = 120;
 const minimumKeepDurationSeconds = 5;
-const stageDelayMs = 2_000;
+const mockStageDelayMs = 2_000;
 const stageTimeoutMs = 45_000;
 const sampleRecordingSource = "/sample-recordings/child-struggling.mp4";
+const uploadRetryCount = 2;
 
 function initialFlowState(debugMode: AssessDebugMode | undefined): FlowState {
   switch (debugMode) {
@@ -100,17 +116,112 @@ function recordingFileName(mimeType: string) {
   return `suno-reading-${Date.now()}.${mimeType.includes("mp4") ? "mp4" : "webm"}`;
 }
 
-function waitForMockStage(delayMs: number, timeoutMs: number) {
-  return new Promise<void>((resolve, reject) => {
-    const finishTimer = window.setTimeout(() => {
-      window.clearTimeout(timeoutTimer);
-      resolve();
-    }, delayMs);
-    const timeoutTimer = window.setTimeout(() => {
-      window.clearTimeout(finishTimer);
-      reject(new Error("The mock processing stage timed out."));
-    }, timeoutMs);
-  });
+function wait(milliseconds: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function withStageTimeout<T>(
+  activeAbortControllerRef: MutableRefObject<AbortController | null>,
+  operation: (signal: AbortSignal) => Promise<T>,
+) {
+  const controller = new AbortController();
+  let didTimeout = false;
+  const timeout = window.setTimeout(() => {
+    didTimeout = true;
+    controller.abort();
+  }, stageTimeoutMs);
+
+  activeAbortControllerRef.current = controller;
+
+  try {
+    return await operation(controller.signal);
+  } catch (error) {
+    if (didTimeout) {
+      throw new PipelineTimeoutError();
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+    if (activeAbortControllerRef.current === controller) {
+      activeAbortControllerRef.current = null;
+    }
+  }
+}
+
+function errorMessage(payload: unknown, fallback: string) {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "error" in payload &&
+    typeof (payload as { error?: unknown }).error === "string"
+  ) {
+    return (payload as { error: string }).error;
+  }
+
+  return fallback;
+}
+
+function isUnassessable(payload: unknown): payload is { reason: string; unassessable: true } {
+  return (
+    Boolean(payload) &&
+    typeof payload === "object" &&
+    (payload as { unassessable?: unknown }).unassessable === true &&
+    typeof (payload as { reason?: unknown }).reason === "string"
+  );
+}
+
+function parseTranscript(payload: unknown): TimestampedTranscript | null {
+  const parsed = payload && typeof payload === "object"
+    ? (payload as TimestampedTranscript)
+    : null;
+
+  if (!parsed || typeof parsed.text !== "string" || !Number.isFinite(parsed.durationSec)) {
+    return null;
+  }
+
+  if (!Array.isArray(parsed.words)) {
+    return null;
+  }
+
+  return parsed.words.every(
+    (word) =>
+      word &&
+      typeof word.word === "string" &&
+      Number.isFinite(word.start) &&
+      Number.isFinite(word.end),
+  )
+    ? parsed
+    : null;
+}
+
+function parseAnalyzeResponse(payload: unknown): AnalyzeResponse | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const candidate = payload as { analysis?: unknown; assessmentId?: unknown };
+  const analysis = analysisSchema.safeParse(candidate.analysis);
+
+  if (!analysis.success || typeof candidate.assessmentId !== "string") {
+    return null;
+  }
+
+  return { analysis: analysis.data, assessmentId: candidate.assessmentId };
+}
+
+function flowStateForUnassessable(reason: string): FlowState {
+  const normalized = reason.toLowerCase();
+
+  if (normalized.includes("too fast")) {
+    return "unassessable-too-fast";
+  }
+
+  if (normalized.includes("did not match")) {
+    return "unassessable-wrong-passage";
+  }
+
+  return "unassessable-quiet";
 }
 
 function MicrophoneIcon() {
@@ -170,7 +281,7 @@ function AssessmentErrorCard({ actions, body, detail, title }: AssessmentErrorCa
   );
 }
 
-export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps) {
+export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: AssessFlowProps) {
   const [flowState, setFlowState] = useState<FlowState>(() => initialFlowState(debugMode));
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isRequestingMicrophone, setIsRequestingMicrophone] = useState(false);
@@ -179,6 +290,7 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
   const [notice, setNotice] = useState("");
   const [processingStep, setProcessingStep] = useState(0);
   const [recording, setRecording] = useState<CapturedRecording | null>(null);
+  const [completedAssessment, setCompletedAssessment] = useState<AnalyzeResponse | null>(null);
   const [meterLevels, setMeterLevels] = useState([0.18, 0.28, 0.42, 0.28, 0.18]);
   const [hasLoadedSample, setHasLoadedSample] = useState(false);
 
@@ -186,7 +298,8 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
   const elapsedSecondsRef = useRef(0);
   const meterTimerRef = useRef<number | null>(null);
   const microphoneRequestRef = useRef(0);
-  const mockRunRef = useRef(0);
+  const pipelineRunRef = useRef(0);
+  const activeAbortControllerRef = useRef<AbortController | null>(null);
   const sampleRunRef = useRef(0);
   const sampleProcessingRef = useRef(false);
   const recordingSessionRef = useRef(0);
@@ -250,29 +363,188 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
     }
   }, []);
 
+  const cancelPipeline = useCallback(() => {
+    pipelineRunRef.current += 1;
+    activeAbortControllerRef.current?.abort();
+    activeAbortControllerRef.current = null;
+  }, []);
+
+  const postJson = useCallback(
+    async (path: string, body: unknown): Promise<ApiResponse> =>
+      withStageTimeout(activeAbortControllerRef, async (signal) => {
+        const response = await fetch(path, {
+          body: JSON.stringify(body),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+          signal,
+        });
+        const payload = await response.json().catch(() => null);
+
+        return { ok: response.ok, payload };
+      }),
+    [],
+  );
+
+  const uploadWithRetries = useCallback(
+    async (file: File) => {
+      let lastError: unknown;
+
+      for (let attempt = 0; attempt <= uploadRetryCount; attempt += 1) {
+        try {
+          return await withStageTimeout(activeAbortControllerRef, (signal) =>
+            uploadAudioFile(file, signal),
+          );
+        } catch (error) {
+          if (error instanceof PipelineTimeoutError) {
+            throw error;
+          }
+
+          lastError = error;
+          if (attempt < uploadRetryCount) {
+            setNotice("The upload paused. Trying again…");
+            await wait((attempt + 1) * 600);
+          }
+        }
+      }
+
+      throw lastError instanceof Error
+        ? lastError
+        : new Error("The audio upload did not complete.");
+    },
+    [],
+  );
+
   const runMockProcessing = useCallback(async () => {
-    const runId = mockRunRef.current + 1;
-    mockRunRef.current = runId;
+    const runId = pipelineRunRef.current + 1;
+    pipelineRunRef.current = runId;
+    setCompletedAssessment(null);
     setFlowState("processing");
 
     try {
       for (const [index] of processingStages.entries()) {
         setProcessingStep(index);
-        await waitForMockStage(stageDelayMs, stageTimeoutMs);
+        await wait(mockStageDelayMs);
 
-        if (mockRunRef.current !== runId) {
+        if (pipelineRunRef.current !== runId) {
           return;
         }
       }
 
       setFlowState("complete");
     } catch {
-      if (mockRunRef.current === runId) {
-        stopSamplePlayback();
+      if (pipelineRunRef.current === runId) {
         setFlowState("processing-error");
       }
     }
-  }, [stopSamplePlayback]);
+  }, []);
+
+  const runLivePipeline = useCallback(
+    async (capturedRecording: CapturedRecording) => {
+      activeAbortControllerRef.current?.abort();
+      const runId = pipelineRunRef.current + 1;
+      pipelineRunRef.current = runId;
+      let activeStage: "upload" | "transcribe" | "analyze" = "upload";
+      setCompletedAssessment(null);
+      setNotice("");
+      setFlowState("processing");
+
+      const isCurrentRun = () => pipelineRunRef.current === runId;
+
+      try {
+        setProcessingStep(0);
+        const uploadedAudio = await uploadWithRetries(capturedRecording.file);
+
+        if (!isCurrentRun()) {
+          return;
+        }
+
+        activeStage = "transcribe";
+        setProcessingStep(1);
+        const transcriptionResponse = await postJson("/api/transcribe", {
+          audioUrl: uploadedAudio.audioUrl,
+        });
+
+        if (!isCurrentRun()) {
+          return;
+        }
+
+        if (isUnassessable(transcriptionResponse.payload)) {
+          setNotice(transcriptionResponse.payload.reason);
+          setFlowState(flowStateForUnassessable(transcriptionResponse.payload.reason));
+          return;
+        }
+
+        const transcript = parseTranscript(transcriptionResponse.payload);
+        if (!transcriptionResponse.ok || !transcript) {
+          throw new Error(
+            errorMessage(transcriptionResponse.payload, "Couldn't transcribe the recording. Please try again."),
+          );
+        }
+
+        activeStage = "analyze";
+        setProcessingStep(2);
+        const analysisResponse = await postJson("/api/analyze", {
+          audioUrl: uploadedAudio.audioUrl,
+          passageId: context.passage.id,
+          studentId: context.student.id,
+          transcript,
+        });
+
+        if (!isCurrentRun()) {
+          return;
+        }
+
+        if (isUnassessable(analysisResponse.payload)) {
+          setNotice(analysisResponse.payload.reason);
+          setFlowState(flowStateForUnassessable(analysisResponse.payload.reason));
+          return;
+        }
+
+        const assessment = parseAnalyzeResponse(analysisResponse.payload);
+        if (!analysisResponse.ok || !assessment) {
+          throw new Error(
+            errorMessage(analysisResponse.payload, "Couldn't analyze the reading. Please try again."),
+          );
+        }
+
+        setCompletedAssessment(assessment);
+        setFlowState("complete");
+      } catch (error) {
+        if (!isCurrentRun()) {
+          return;
+        }
+
+        if (activeStage === "upload") {
+          setNotice(
+            error instanceof PipelineTimeoutError
+              ? "The upload took too long. Check the connection and retry."
+              : "The recording is still saved here. You can retry without recording again.",
+          );
+          setFlowState("upload-error");
+          return;
+        }
+
+        setNotice(
+          error instanceof PipelineTimeoutError
+            ? "This step took too long. Please try once more."
+            : "Something went wrong while checking the reading. Please try again.",
+        );
+        setFlowState("processing-error");
+      }
+    },
+    [context.passage.id, context.student.id, postJson, uploadWithRetries],
+  );
+
+  const runAssessment = useCallback(
+    (capturedRecording: CapturedRecording) => {
+      if (mode === "mock") {
+        return runMockProcessing();
+      }
+
+      return runLivePipeline(capturedRecording);
+    },
+    [mode, runLivePipeline, runMockProcessing],
+  );
 
   const stopRecording = useCallback(
     (stoppedAtLimit = false) => {
@@ -322,6 +594,7 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
       return;
     }
 
+    cancelPipeline();
     sampleRunRef.current += 1;
     sampleProcessingRef.current = false;
     stopSamplePlayback();
@@ -329,7 +602,6 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
     setIsRequestingMicrophone(true);
     setMicrophoneMessage("");
     setNotice("");
-    mockRunRef.current += 1;
     const microphoneRequestId = microphoneRequestRef.current + 1;
     microphoneRequestRef.current = microphoneRequestId;
 
@@ -355,12 +627,12 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
       const recordingSessionId = recordingSessionRef.current + 1;
 
       recordingSessionRef.current = recordingSessionId;
-
       recorderRef.current = recorder;
       recorderChunksRef.current = [];
       elapsedSecondsRef.current = 0;
       setElapsedSeconds(0);
       setRecording(null);
+      setCompletedAssessment(null);
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -387,17 +659,18 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
           return;
         }
 
-        setRecording({
+        const capturedRecording = {
           durationSec,
           file: new File([blob], recordingFileName(finalMimeType), { type: finalMimeType }),
-        });
+        };
+        setRecording(capturedRecording);
 
         if (durationSec < minimumKeepDurationSeconds) {
           setFlowState("short-recording");
           return;
         }
 
-        void runMockProcessing();
+        void runAssessment(capturedRecording);
       };
 
       recorder.start(250);
@@ -426,9 +699,10 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
       setFlowState("mic-error");
     }
   }, [
+    cancelPipeline,
     clearRecordingResources,
     isRequestingMicrophone,
-    runMockProcessing,
+    runAssessment,
     startAudioMeter,
     stopRecording,
     stopSamplePlayback,
@@ -443,12 +717,14 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
     sampleRunRef.current = sampleRunId;
     sampleProcessingRef.current = true;
     microphoneRequestRef.current += 1;
+    cancelPipeline();
     clearRecordingResources(true);
     setIsRequestingMicrophone(false);
     setIsStopping(false);
     setMicrophoneMessage("");
     setNotice("Playing a sample child recording.");
     setRecording(null);
+    setCompletedAssessment(null);
     setElapsedSeconds(0);
     setHasLoadedSample(true);
 
@@ -459,33 +735,76 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
         sampleAudio.currentTime = 0;
         void sampleAudio.play().catch(() => {
           if (sampleRunRef.current === sampleRunId) {
-            setNotice("Processing the sample recording.");
+            setNotice("Preparing the sample recording.");
           }
         });
       } catch {
-        setNotice("Processing the sample recording.");
+        setNotice("Preparing the sample recording.");
       }
     }
 
-    void runMockProcessing().finally(() => {
-      if (sampleRunRef.current === sampleRunId) {
-        sampleProcessingRef.current = false;
+    if (mode === "mock") {
+      void runMockProcessing().finally(() => {
+        if (sampleRunRef.current === sampleRunId) {
+          sampleProcessingRef.current = false;
+        }
+      });
+      return;
+    }
+
+    void (async () => {
+      try {
+        const response = await fetch(sampleRecordingSource);
+        if (!response.ok) {
+          throw new Error("The sample recording could not be loaded.");
+        }
+
+        const blob = await response.blob();
+        if (sampleRunRef.current !== sampleRunId) {
+          return;
+        }
+
+        const mimeType = blob.type === "audio/mp4" || blob.type === "video/mp4"
+          ? blob.type
+          : "audio/mp4";
+        const duration = sampleAudio?.duration;
+        const capturedRecording = {
+          durationSec:
+            typeof duration === "number" && Number.isFinite(duration) && duration > 0
+              ? Math.round(duration)
+              : minimumKeepDurationSeconds,
+          file: new File([blob], "suno-sample-child.mp4", { type: mimeType }),
+        };
+
+        setRecording(capturedRecording);
+        setNotice("Checking the sample child recording.");
+        await runLivePipeline(capturedRecording);
+      } catch {
+        if (sampleRunRef.current === sampleRunId) {
+          setNotice("The sample recording could not be prepared. Please try again.");
+          setFlowState("processing-error");
+        }
+      } finally {
+        if (sampleRunRef.current === sampleRunId) {
+          sampleProcessingRef.current = false;
+        }
       }
-    });
-  }, [clearRecordingResources, runMockProcessing]);
+    })();
+  }, [cancelPipeline, clearRecordingResources, mode, runLivePipeline, runMockProcessing]);
 
   const discardRecording = useCallback(() => {
-    mockRunRef.current += 1;
+    cancelPipeline();
     sampleRunRef.current += 1;
     sampleProcessingRef.current = false;
     stopSamplePlayback();
     setRecording(null);
+    setCompletedAssessment(null);
     setElapsedSeconds(0);
     setNotice("");
     setMicrophoneMessage("");
     setHasLoadedSample(false);
     setFlowState("ready");
-  }, [stopSamplePlayback]);
+  }, [cancelPipeline, stopSamplePlayback]);
 
   const keepShortRecording = useCallback(() => {
     if (!recording) {
@@ -493,12 +812,21 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
       return;
     }
 
-    void runMockProcessing();
-  }, [discardRecording, recording, runMockProcessing]);
+    void runAssessment(recording);
+  }, [discardRecording, recording, runAssessment]);
+
+  const retryRecording = useCallback(() => {
+    if (!recording) {
+      discardRecording();
+      return;
+    }
+
+    void runAssessment(recording);
+  }, [discardRecording, recording, runAssessment]);
 
   useEffect(
     () => () => {
-      mockRunRef.current += 1;
+      cancelPipeline();
       microphoneRequestRef.current += 1;
       recordingSessionRef.current += 1;
       sampleRunRef.current += 1;
@@ -506,11 +834,15 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
       stopSamplePlayback();
       clearRecordingResources(true);
     },
-    [clearRecordingResources, stopSamplePlayback],
+    [cancelPipeline, clearRecordingResources, stopSamplePlayback],
   );
 
   const passageIsDimmed = flowState === "processing";
   const levelClassName = `level-${context.passage.level}`;
+  const completionAnalysis = completedAssessment?.analysis ?? mockAnalysis;
+  const reviewHref = completedAssessment
+    ? `/assess/${context.student.id}?assessmentId=${encodeURIComponent(completedAssessment.assessmentId)}`
+    : `/assess/${context.student.id}?mock=confirm`;
 
   return (
     <main className="assessment-page">
@@ -571,13 +903,17 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
           className={`sample-audio-player${hasLoadedSample ? " is-visible" : ""}`}
         >
           <p className="sample-audio-title">Sample child recording</p>
-          <p className="sample-audio-note">Demo playback — the result that follows is a fixed practice result.</p>
+          <p className="sample-audio-note">
+            {mode === "mock"
+              ? "Practice playback for the visual demo."
+              : "This sample is processed through the same reading check."}
+          </p>
           <audio
             aria-label="Sample child recording"
             controls
             onError={() => {
               if (hasLoadedSample) {
-                setNotice("The sample could not play here. The demo is still processing its mock result.");
+                setNotice("The sample could not play here, but it can still be checked.");
               }
             }}
             preload="metadata"
@@ -659,7 +995,7 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
           </section>
         ) : null}
 
-        {flowState === "complete" ? (
+        {flowState === "complete" && completionAnalysis ? (
           <section className="completion-card" aria-live="polite" role="status">
             <span className="completion-icon">
               <CheckIcon />
@@ -667,14 +1003,11 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
             <div>
               <h2>Reading check complete</h2>
               <p>
-                A {levelLabels[mockAnalysis.level].toLowerCase()}-level mock result is ready for teacher review.
+                A {levelLabels[completionAnalysis.level].toLowerCase()}-level result is ready for teacher review.
               </p>
             </div>
             <div className="completion-actions">
-              <Link
-                className="primary-action completion-review"
-                href={"/assess/" + context.student.id + "?mock=confirm"}
-              >
+              <Link className="primary-action completion-review" href={reviewHref}>
                 Review result
               </Link>
               <button className="secondary-action" onClick={discardRecording} type="button">
@@ -688,12 +1021,12 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
           <AssessmentErrorCard
             actions={
               <>
-              <button className="primary-action" onClick={() => void startRecording()} type="button">
-                Try again
-              </button>
-              <button className="secondary-action" onClick={loadSampleRecording} type="button">
-                Use a sample
-              </button>
+                <button className="primary-action" onClick={() => void startRecording()} type="button">
+                  Try again
+                </button>
+                <button className="secondary-action" onClick={loadSampleRecording} type="button">
+                  Use a sample
+                </button>
               </>
             }
             body="Allow the microphone in your browser's address bar, or use a sample recording."
@@ -705,11 +1038,12 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
         {flowState === "upload-error" ? (
           <AssessmentErrorCard
             actions={
-              <button className="primary-action" onClick={() => void runMockProcessing()} type="button">
+              <button className="primary-action" onClick={retryRecording} type="button">
                 Retry upload
               </button>
             }
-            body={"Check the connection. The recording is saved \u2014 you won't need to record again."}
+            body={"Check the connection. The recording is saved — you won't need to record again."}
+            detail={notice || undefined}
             title="The recording didn't upload"
           />
         ) : null}
@@ -733,7 +1067,7 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
                 Record again
               </button>
             }
-            body={"The reading was too fast to assess \u2014 please try again."}
+            body={"The reading was too fast to assess — please try again."}
             title="The reading was too fast to assess"
           />
         ) : null}
@@ -758,11 +1092,12 @@ export function AssessFlow({ context, debugMode, mockAnalysis }: AssessFlowProps
         {flowState === "processing-error" ? (
           <AssessmentErrorCard
             actions={
-              <button className="primary-action" onClick={() => void runMockProcessing()} type="button">
+              <button className="primary-action" onClick={retryRecording} type="button">
                 Retry
               </button>
             }
             body="Something's stuck on our side. Try once more."
+            detail={notice || undefined}
             title="This is taking too long"
           />
         ) : null}

@@ -58,11 +58,12 @@ function prepareFileMetadata(file: File) {
   return { contentType, fileName };
 }
 
-async function getUploadUrl(fileName: string, contentType: string) {
+async function getUploadUrl(fileName: string, contentType: string, signal?: AbortSignal) {
   const response = await fetch("/api/upload-url", {
     body: JSON.stringify({ contentType, fileName }),
     headers: { "content-type": "application/json" },
     method: "POST",
+    signal,
   });
 
   const payload = (await response.json().catch(() => null)) as
@@ -83,9 +84,9 @@ async function getUploadUrl(fileName: string, contentType: string) {
  * stays on the server; the browser receives only a short-lived, single-object
  * upload URL.
  */
-export async function uploadAudioFile(file: File): Promise<UploadedAudio> {
+export async function uploadAudioFile(file: File, signal?: AbortSignal): Promise<UploadedAudio> {
   const { contentType, fileName } = prepareFileMetadata(file);
-  const upload = await getUploadUrl(fileName, contentType);
+  const upload = await getUploadUrl(fileName, contentType, signal);
   const response = await fetch(upload.signedUrl, {
     body: file,
     headers: {
@@ -93,6 +94,7 @@ export async function uploadAudioFile(file: File): Promise<UploadedAudio> {
       "content-type": upload.contentType,
     },
     method: "PUT",
+    signal,
   });
 
   if (!response.ok) {
