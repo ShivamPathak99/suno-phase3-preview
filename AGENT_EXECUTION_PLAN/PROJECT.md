@@ -169,13 +169,13 @@ JSON blobs (`analysis_json`, `content_json`) are deliberate: schema churn is the
 
 | Route | In | Out |
 |---|---|---|
-| `POST /api/upload` | multipart audio (webm/mp4) | `{ audioUrl }` |
-| `POST /api/transcribe` | `{ audioUrl }` | `{ words: [{word, start, end}], text }` |
-| `POST /api/analyze` | `{ passageId, transcript }` | analysis JSON (§2.6), saved as draft assessment |
-| `POST /api/assessments/[id]/confirm` | `{ overrides: [...], level }` | confirmed assessment |
+| `POST /api/upload-url` | `{ fileName, contentType }` | `{ audioUrl, contentType, path, signedUrl }`; browser PUTs the blob directly to the signed Supabase URL |
+| `POST /api/transcribe` | `{ audioUrl }` | success: `{ words: [{word, start, end}], text, durationSec }`; guard: `{ unassessable: true, reason }` |
+| `POST /api/analyze` | `{ studentId, passageId, audioUrl, transcript }` | `{ assessmentId, analysis }`; `analysis` is exactly §2.6 and is saved as an unconfirmed draft |
+| `POST /api/assessments/[assessmentId]/confirm` | `{ overrides: [...] }` | confirmed assessment; server recomputes level after overrides |
 | `POST /api/worksheets` | `{ level, language }` | worksheet content JSON |
 
-Notes: `OPENAI_API_KEY` server-side only; MediaRecorder produces `webm/opus` on Chrome and `mp4/aac` on iOS Safari — accept both (demo on Chrome).
+Notes: `assessmentId` is the stable UI handoff from draft analysis to teacher confirmation; it is never added to the frozen §2.6 analysis object. Analyze may also return `{ unassessable: true, reason }` when its guard rejects the transcript or detects a different passage. `OPENAI_API_KEY` stays server-side only; MediaRecorder produces `webm/opus` on Chrome and `mp4/aac` on iOS Safari — accept both (demo on Chrome).
 
 ## 2.5 Screens (three, one job each)
 

@@ -12,7 +12,9 @@
     "seed": "node --env-file=.env.local --import tsx scripts/seed.ts",
     "setup:storage": "node --env-file=.env.local --import tsx scripts/setup-storage.ts",
     "test:guards": "node --import tsx scripts/test-transcription-guard.ts",
-    "verify:guards": "node --env-file=.env.local --import tsx scripts/verify-transcription-guard-live.ts"
+    "verify:guards": "node --env-file=.env.local --import tsx scripts/verify-transcription-guard-live.ts",
+    "test:analysis": "node --import tsx scripts/test-analysis-contract.ts",
+    "verify:analysis": "node --env-file=.env.local --import tsx scripts/verify-analysis-live.ts"
   },
   "engines": {
     "node": ">=20.9.0"
@@ -22,7 +24,8 @@
     "next": "^16.2.10",
     "openai": "^6.48.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
