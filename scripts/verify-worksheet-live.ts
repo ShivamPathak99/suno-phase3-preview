@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 
 import { POST } from "../src/app/api/worksheets/route";
 import { readingLevels } from "../src/lib/analysisSchema";
-import { validateWorksheet } from "../src/lib/worksheetSchema";
+import { validateWorksheet, worksheetWordCount } from "../src/lib/worksheetSchema";
 
 function fail(message: string): never {
   throw new Error(`C-4 live verification failed: ${message}`);
@@ -38,6 +38,11 @@ async function main() {
     }
 
     const worksheet = validateWorksheet(payload, level);
+
+    if (level === "story" && worksheetWordCount(worksheet.body) > 90) {
+      fail(`story body must satisfy the 80-90 word one-page target.`);
+    }
+
     console.log(`${level}: ${JSON.stringify(worksheet)}`);
   }
 

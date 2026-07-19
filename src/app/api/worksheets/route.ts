@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await generateWorksheet(input.data);
+    const result = await generateWorksheet(input.data, request.signal);
 
     console.info(`Worksheet generation completed with ${result.model}.`);
 

@@ -9,6 +9,7 @@ import {
   type SuggestedGroup,
   type UnassessedStudent,
 } from "@/lib/mock-dashboard";
+import { worksheetPath } from "@/lib/worksheet-route";
 import type { ReadingLevel } from "@/lib/mock-assessment";
 
 type ClassroomDashboardProps = {
@@ -285,9 +286,9 @@ export function ClassroomDashboard({
                   <h3>{levelLabels[group.level]} level</h3>
                   <span>{childCountLabel(group.childCount)}</span>
                 </div>
-                <button className="group-print-button" disabled type="button">
+                <Link className="group-print-button" href={worksheetPath(group.level)}>
                   Print reading cards
-                </button>
+                </Link>
               </li>
             ))}
           </ul>

@@ -3,6 +3,7 @@ import {
   type WorksheetRequest,
   worksheetJsonSchema,
   worksheetWordCountBands,
+  worksheetWordCount,
   validateWorksheet,
 } from "@/lib/worksheetSchema";
 import { callOpenAI, createOpenAIClient } from "@/lib/openai";
@@ -30,7 +31,7 @@ function levelInstruction(request: WorksheetRequest) {
     case "paragraph":
       return `a connected ${band.min}-${band.max}-word micro-story or everyday paragraph. The question should check one concrete detail from the text.`;
     case "story":
-      return `an ${band.min}-${band.max}-word short story with a clear beginning, middle, and end. The question should check one concrete detail from the story.`;
+      return `an ${band.min}-${band.max}-word short story with a clear beginning, middle, and end. Prefer ${band.min}-90 words so it remains a clean one-page reading card. The question should check one concrete detail from the story.`;
   }
 }
 
@@ -55,6 +56,14 @@ function responseValidationMessage(error: unknown) {
   return error instanceof Error ? error.message.slice(0, 800) : "Unknown validation error.";
 }
 
+function validateOnePageTarget(worksheet: WorksheetContent, request: WorksheetRequest) {
+  if (request.level === "story" && worksheetWordCount(worksheet.body) > 90) {
+    throw new Error("A story worksheet must contain 80-90 words so it fits cleanly on one A4 page.");
+  }
+
+  return worksheet;
+}
+
 export type WorksheetGenerationResult = {
   worksheet: WorksheetContent;
   model: string;
@@ -67,6 +76,7 @@ export type WorksheetGenerationResult = {
  */
 export async function generateWorksheet(
   request: WorksheetRequest,
+  signal?: AbortSignal,
 ): Promise<WorksheetGenerationResult> {
   const client = createOpenAIClient();
   let correction: string | undefined;
@@ -88,7 +98,7 @@ export async function generateWorksheet(
             strict: true,
           },
         },
-      }),
+      }, { signal }),
     );
 
     try {
@@ -97,7 +107,10 @@ export async function generateWorksheet(
       }
 
       return {
-        worksheet: validateWorksheet(JSON.parse(response.output_text), request.level),
+        worksheet: validateOnePageTarget(
+          validateWorksheet(JSON.parse(response.output_text), request.level),
+          request,
+        ),
         model: response.model,
       };
     } catch (error) {
