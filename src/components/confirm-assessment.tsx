@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   type CSSProperties,
   type FormEvent,
@@ -162,12 +163,11 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
   const [editorPosition, setEditorPosition] = useState<EditorPosition | null>(null);
   const [overrideNotice, setOverrideNotice] = useState("");
   const [isConfirming, setIsConfirming] = useState(false);
-  const [isConfirmed, setIsConfirmed] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
 
   const confirmTimerRef = useRef<number | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const router = useRouter();
 
   const fragments = useMemo(() => splitPassage(context.passage.body), [context.passage.body]);
   const reviewedWords = useMemo(
@@ -247,22 +247,22 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
   );
 
   const confirmLevel = useCallback(() => {
-    if (isConfirming || isConfirmed) {
+    if (isConfirming) {
       return;
     }
 
     setIsConfirming(true);
     confirmTimerRef.current = window.setTimeout(() => {
-      setIsConfirming(false);
-      setIsConfirmed(true);
-      setToastMessage(
-        context.student.name +
-          " confirmed at " +
-          levelLabels[mockAnalysis.level].toLowerCase() +
-          " level",
+      router.push(
+        "/?confirmed=" +
+          encodeURIComponent(context.student.id) +
+          "&level=" +
+          encodeURIComponent(mockAnalysis.level) +
+          "&assessmentId=" +
+          encodeURIComponent(context.assessmentId),
       );
     }, 250);
-  }, [context.student.name, isConfirmed, isConfirming, mockAnalysis.level]);
+  }, [context.assessmentId, context.student.id, isConfirming, mockAnalysis.level, router]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -313,15 +313,6 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [closeEditor, selectedIndex]);
-
-  useEffect(() => {
-    if (!toastMessage) {
-      return undefined;
-    }
-
-    const hideToast = window.setTimeout(() => setToastMessage(""), 3_000);
-    return () => window.clearTimeout(hideToast);
-  }, [toastMessage]);
 
   useEffect(
     () => () => {
@@ -476,15 +467,11 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
             <button
               aria-busy={isConfirming}
               className="primary-action confirm-level-action"
-              disabled={isConfirming || isConfirmed}
+              disabled={isConfirming}
               onClick={confirmLevel}
               type="button"
             >
-              {isConfirmed ? (
-                <>
-                  Confirmed <CheckIcon />
-                </>
-              ) : isConfirming ? (
+              {isConfirming ? (
                 "Confirming…"
               ) : (
                 <>
@@ -564,12 +551,6 @@ export function ConfirmAssessment({ context, mockAnalysis }: ConfirmAssessmentPr
         </>
       ) : null}
 
-      {toastMessage ? (
-        <div aria-live="polite" className="confirmation-toast" role="status">
-          <CheckIcon />
-          <span>{toastMessage}</span>
-        </div>
-      ) : null}
     </main>
   );
 }

@@ -4,7 +4,7 @@ import { analysisSchema, type ReadingAnalysis } from "@/lib/analysisSchema";
 
 export type ReadingLevel = "letter" | "word" | "paragraph" | "story";
 
-type MockStudent = {
+export type MockStudent = {
   id: string;
   level: ReadingLevel;
   name: string;
@@ -30,14 +30,14 @@ export type MockAssessmentContext = {
   student: MockStudent;
 };
 
-function mockDraftAssessmentId(studentId: string) {
+export function mockDraftAssessmentId(studentId: string) {
   const studentSuffix = studentId.match(/([0-9a-f]{12})$/iu)?.[1];
   const suffix = studentSuffix ?? "000000000000";
 
   return "40000000-0000-4000-8000-" + suffix;
 }
 
-const students: MockStudent[] = [
+export const mockStudents: MockStudent[] = [
   ["Aarti", "letter"],
   ["Babu", "letter"],
   ["Chitra", "letter"],
@@ -83,7 +83,7 @@ const fallbackStudent: MockStudent = {
  * mock_analysis.json exactly. Gate 3 will replace both with the live read path.
  */
 export function getMockAssessmentContext(studentId: string): MockAssessmentContext {
-  const student = students.find((candidate) => candidate.id === studentId) ?? fallbackStudent;
+  const student = mockStudents.find((candidate) => candidate.id === studentId) ?? fallbackStudent;
 
   return {
     assessmentId: mockDraftAssessmentId(student.id),

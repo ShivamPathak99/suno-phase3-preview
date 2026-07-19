@@ -1,18 +1,44 @@
-export default function Home() {
+import { ClassroomDashboard } from "@/components/classroom-dashboard";
+import { readingLevels } from "@/lib/analysisSchema";
+import { getMockClassroom, type MockConfirmation } from "@/lib/mock-dashboard";
+import type { ReadingLevel } from "@/lib/mock-assessment";
+
+type HomePageProps = {
+  searchParams: Promise<{
+    assessmentId?: string | string[];
+    confirmed?: string | string[];
+    level?: string | string[];
+  }>;
+};
+
+function singleValue(value: string | string[] | undefined) {
+  return typeof value === "string" ? value : undefined;
+}
+
+function isReadingLevel(value: string | undefined): value is ReadingLevel {
+  return value !== undefined && (readingLevels as readonly string[]).includes(value);
+}
+
+function isUuid(value: string | undefined) {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl items-center px-6 py-16">
-      <section className="w-full rounded-xl border border-[#c9d8e4] bg-white p-8 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#146152]">
-          Suno
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#1e2b33]">
-          Foundation ready
-        </h1>
-        <p className="mt-4 max-w-xl text-base leading-7 text-[#5c6b73]">
-          The assessment workflow will be built here through the frozen Agent A,
-          B, and C tickets.
-        </p>
-      </section>
-    </main>
+    value !== undefined &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(value)
   );
+}
+
+export default async function Home({ searchParams }: HomePageProps) {
+  const query = await searchParams;
+  const assessmentId = singleValue(query.assessmentId);
+  const studentId = singleValue(query.confirmed);
+  const level = singleValue(query.level);
+  const confirmation: MockConfirmation | undefined = studentId && isReadingLevel(level)
+    ? {
+        assessmentId: isUuid(assessmentId) ? assessmentId : undefined,
+        level,
+        studentId,
+      }
+    : undefined;
+  const classroom = getMockClassroom(confirmation);
+
+  return <ClassroomDashboard {...classroom} />;
 }
