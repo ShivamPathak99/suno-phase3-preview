@@ -15,6 +15,11 @@ exact filenames in that manifest:
 `08-hindi-quality.mp4` is optional and is run only with
 `npm run golden -- --include-optional`.
 
+The current `06-near-silent-4s.mp4` container is 5.92 seconds long despite
+its historical filename. It exercises the long-quiet Whisper-hallucination
+guard; `npm run golden -- --synthetic-only` separately generates the exact
+four-second silent audio required by the A-4 acceptance check.
+
 Before adding a child recording, obtain parent consent for the exact purpose
 and repository visibility, OpenAI processing, and the brief temporary public
 Supabase upload. Remove identifying metadata and use no face video.
@@ -28,8 +33,7 @@ runs the frozen upload, transcription, and analysis routes, prints its results,
 then deletes that object and any draft assessment it created. It never treats a
 golden-model score as a teacher-confirmed assessment.
 
-For `05-adult-scripted-errors.mp4`, use the exact scripted errors recorded in
-the manifest: substitute **home** for **school**, skip **small**, self-correct
-**tap**, and repeat **plant**. This is what lets the harness verify that the
-self-corrected and repeated words end `correct` while the substitution and skip
-are caught.
+For `05-adult-scripted-errors.mp4`, the manifest records the verified spoken
+fixture: skip **small** and **the**, say **gave** for **give**, while **tap**
+and **plant** remain correct. This lets the harness verify both substitutions
+and skips without asserting errors that are not in the recording.

@@ -29,9 +29,9 @@
       },
       "expected": {
         "outcome": "assessment",
-        "minErrorCount": 1,
+        "expectedLevels": ["word"],
         "manualReviewRequired": true,
-        "notes": "Human review: at least one known decoding error should be visible; tune only against a named mismatch."
+        "notes": "Human review: this child reads the English word list slowly but accurately; assess the word-level result and pronunciation tolerance rather than inventing a decoding error."
       }
     },
     {
@@ -83,11 +83,11 @@
         "minErrorCount": 2,
         "expectedWordStatuses": [
           {
-            "passageWordIndex": 1,
-            "status": "substituted"
+            "passageWordIndex": 5,
+            "status": "skipped"
           },
           {
-            "passageWordIndex": 5,
+            "passageWordIndex": 12,
             "status": "skipped"
           },
           {
@@ -95,16 +95,20 @@
             "status": "correct"
           },
           {
+            "passageWordIndex": 15,
+            "status": "substituted"
+          },
+          {
             "passageWordIndex": 17,
             "status": "correct"
           }
         ],
-        "notes": "Script this fixture against The School Garden: say 'home' for school (#2), skip small (#6), self-correct tap (#14), and repeat plant (#18). The final self-corrected and repeated words must remain correct."
+        "notes": "Recorded against The School Garden: skip small (#6) and the (#13), say gave for give (#16), while tap (#14) and plant (#18) remain correct."
       }
     },
     {
       "id": "near-silent",
-      "label": "Near-silent - 4 seconds",
+      "label": "Near-silent recording",
       "language": "en",
       "studentId": "10000000-0000-4000-8000-000000000001",
       "passageId": "20000000-0000-4000-8000-000000000003",
@@ -116,7 +120,7 @@
         "outcome": "unassessable",
         "stage": "transcription",
         "reason": "Couldn't hear the reading \u2014 try again closer to the child",
-        "notes": "The four-second near-silent clip must never reach GPT analysis."
+        "notes": "This near-silent clip produces a compressed Whisper hallucination and must never reach GPT analysis."
       }
     },
     {
