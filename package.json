@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "risk-spike": "node --env-file=.env.local --import tsx scripts/risk-spike.ts",
     "seed": "node --env-file=.env.local --import tsx scripts/seed.ts",
-    "setup:storage": "node --env-file=.env.local --import tsx scripts/setup-storage.ts"
+    "setup:storage": "node --env-file=.env.local --import tsx scripts/setup-storage.ts",
+    "test:guards": "node --import tsx scripts/test-transcription-guard.ts",
+    "verify:guards": "node --env-file=.env.local --import tsx scripts/verify-transcription-guard-live.ts"
   },
   "engines": {
     "node": ">=20.9.0"

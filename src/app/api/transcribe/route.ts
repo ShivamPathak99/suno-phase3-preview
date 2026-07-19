@@ -4,6 +4,7 @@ import {
   TranscriptionRequestError,
   transcribePublicAudio,
 } from "@/lib/transcribe-audio";
+import { guardTranscriptionForAnalysis } from "@/lib/transcription-guard";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -31,6 +32,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const transcription = await transcribePublicAudio(body.audioUrl.trim());
+    const guard = guardTranscriptionForAnalysis(transcription);
+
+    if (guard.unassessable) {
+      return NextResponse.json(guard);
+    }
 
     return NextResponse.json(transcription);
   } catch (error) {
