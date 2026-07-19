@@ -14,6 +14,10 @@
 .env*
 !.env.example
 
+# Raw recordings stay local. Only explicitly consented, curated demo files may
+# later be placed in sample-data/ for the submission.
+/audio_samples/
+
 # logs
 npm-debug.log*
 yarn-debug.log*
