@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "risk-spike": "node --env-file=.env.local --import tsx scripts/risk-spike.ts"
+    "risk-spike": "node --env-file=.env.local --import tsx scripts/risk-spike.ts",
+    "seed": "node --env-file=.env.local --import tsx scripts/seed.ts"
   },
   "engines": {
     "node": ">=20.9.0"
