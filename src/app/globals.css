@@ -123,6 +123,18 @@ input:focus-visible {
   white-space: nowrap;
 }
 
+.practice-read-banner {
+  background: #f2f8f5;
+  border: 1.5px dashed #6a9b86;
+  border-radius: 12px;
+  color: #315b4a;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 20px;
+  margin: -4px 0 18px;
+  padding: 11px 14px;
+}
+
 .level-chip {
   align-items: center;
   background: var(--level-tint);

@@ -8,6 +8,7 @@ import type { AnalyzeResponse, TimestampedTranscript } from "@/lib/assessment-co
 import type { AssessDebugMode } from "@/lib/assess-debug";
 import type { AssessmentContext, ReadingLevel } from "@/lib/assessment-types";
 import { uploadAudioFile } from "@/lib/upload-audio";
+import { PracticeReadBanner } from "@/components/practice-read-banner";
 
 type FlowState =
   | "ready"
@@ -491,6 +492,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
         const analysisResponse = await postJson("/api/analyze", {
           audioUrl: uploadedAudio.audioUrl,
           passageId: context.passage.id,
+          purpose: context.purpose,
           studentId: context.student.id,
           transcript,
         });
@@ -537,7 +539,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
         setFlowState("processing-error");
       }
     },
-    [context.passage.id, context.student.id, postJson, uploadWithRetries],
+    [context.passage.id, context.purpose, context.student.id, postJson, uploadWithRetries],
   );
 
   const runAssessment = useCallback(
@@ -881,7 +883,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
   const levelClassName = `level-${context.passage.level}`;
   const completionAnalysis = completedAssessment?.analysis ?? mockAnalysis;
   const reviewHref = completedAssessment
-    ? `/assess/${context.student.id}?assessmentId=${encodeURIComponent(completedAssessment.assessmentId)}`
+    ? `/assess/${context.student.id}?assessmentId=${encodeURIComponent(completedAssessment.assessmentId)}&purpose=${context.purpose}`
     : `/assess/${context.student.id}?mock=confirm`;
 
   return (
@@ -905,6 +907,10 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
             {levelLabels[context.passage.level]}
           </span>
         </header>
+
+        {context.purpose === "focused_readback" ? (
+          <PracticeReadBanner studentName={context.student.name} />
+        ) : null}
 
         <div className="passage-area">
           <article

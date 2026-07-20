@@ -1,4 +1,5 @@
 import { analysisSchema, type ReadingAnalysis } from "@/lib/analysisSchema";
+import type { ReadingPurpose } from "@/lib/adaptive/types";
 import type { AssessmentContext, AssessmentPassage, ReadingLevel } from "@/lib/assessment-types";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -28,8 +29,46 @@ export type LiveDraftAssessment = {
   context: AssessmentContext;
 };
 
+export type LiveAssessmentLaunch = {
+  passageId?: string;
+  purpose: ReadingPurpose;
+};
+
 function isReadingLevel(value: string): value is ReadingLevel {
   return ["letter", "word", "paragraph", "story"].includes(value);
+}
+
+function readPurpose(value: unknown): ReadingPurpose {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    (value as { purpose?: unknown }).purpose === "focused_readback"
+  ) {
+    return "focused_readback";
+  }
+
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    (value as { purpose?: unknown }).purpose === "diagnostic"
+  ) {
+    return "diagnostic";
+  }
+
+  return "benchmark";
+}
+
+function parseStoredDraftAnalysis(value: unknown) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  const { _adaptive, ...analysisValue } = value as Record<string, unknown>;
+  const analysis = analysisSchema.safeParse(analysisValue);
+
+  return analysis.success ? { analysis: analysis.data, purpose: readPurpose(_adaptive) } : null;
 }
 
 function toAssessmentPassage(record: PassageRecord): AssessmentPassage | null {
@@ -179,10 +218,11 @@ async function selectedPassageIdForStudent(studentId: string) {
 
 export async function loadLiveAssessmentContext(
   studentId: string,
+  launch: LiveAssessmentLaunch = { purpose: "benchmark" },
 ): Promise<AssessmentContext | null> {
   const [student, passageId, attemptNumber] = await Promise.all([
     loadStudent(studentId),
-    selectedPassageIdForStudent(studentId),
+    launch.passageId ? Promise.resolve(launch.passageId) : selectedPassageIdForStudent(studentId),
     nextAttemptNumber(studentId),
   ]);
 
@@ -196,7 +236,7 @@ export async function loadLiveAssessmentContext(
     return null;
   }
 
-  return { attemptNumber, passage, student };
+  return { attemptNumber, passage, purpose: launch.purpose, student };
 }
 
 export async function loadLiveDraftAssessment(
@@ -219,9 +259,9 @@ export async function loadLiveDraftAssessment(
     return null;
   }
 
-  const analysis = analysisSchema.safeParse(draft.analysis_json);
+  const storedAnalysis = parseStoredDraftAnalysis(draft.analysis_json);
 
-  if (!analysis.success) {
+  if (!storedAnalysis) {
     throw new Error("The saved reading draft is invalid.");
   }
 
@@ -236,8 +276,8 @@ export async function loadLiveDraftAssessment(
   }
 
   return {
-    analysis: analysis.data,
+    analysis: storedAnalysis.analysis,
     assessmentId: draft.id,
-    context: { attemptNumber, passage, student },
+    context: { attemptNumber, passage, purpose: storedAnalysis.purpose, student },
   };
 }

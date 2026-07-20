@@ -11,6 +11,7 @@ import {
   loadLiveAssessmentContext,
   loadLiveDraftAssessment,
 } from "@/lib/live-assessment-context";
+import type { ReadingPurpose } from "@/lib/adaptive/types";
 import {
   getMockAssessmentContext,
   mockEmptyStudent,
@@ -25,6 +26,8 @@ type AssessPageProps = {
     assessmentId?: string | string[];
     debug?: string | string[];
     mock?: string | string[];
+    passageId?: string | string[];
+    purpose?: string | string[];
   }>;
 };
 
@@ -37,6 +40,14 @@ function isUuid(value: string | undefined) {
     value !== undefined &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(value)
   );
+}
+
+function parsePurpose(value: string | undefined): ReadingPurpose | null {
+  if (value === undefined || value === "benchmark") {
+    return "benchmark";
+  }
+
+  return value === "focused_readback" ? value : null;
 }
 
 /**
@@ -86,7 +97,17 @@ export default async function AssessPage({ params, searchParams }: AssessPagePro
     );
   }
 
-  const context = await loadLiveAssessmentContext(studentId);
+  const purpose = parsePurpose(singleValue(query.purpose));
+  const requestedPassageId = singleValue(query.passageId);
+
+  if (!purpose || (purpose === "focused_readback" && !isUuid(requestedPassageId))) {
+    notFound();
+  }
+
+  const context = await loadLiveAssessmentContext(studentId, {
+    passageId: purpose === "focused_readback" ? requestedPassageId : undefined,
+    purpose,
+  });
 
   if (context) {
     return (

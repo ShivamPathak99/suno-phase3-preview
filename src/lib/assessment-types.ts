@@ -1,4 +1,5 @@
 import type { ReadingAnalysis } from "@/lib/analysisSchema";
+import type { ReadingPurpose } from "@/lib/adaptive/types";
 
 export type ReadingLevel = ReadingAnalysis["level"];
 
@@ -22,5 +23,6 @@ export type AssessmentPassage = {
 export type AssessmentContext = {
   attemptNumber: number;
   passage: AssessmentPassage;
+  purpose: ReadingPurpose;
   student: AssessmentStudent;
 };

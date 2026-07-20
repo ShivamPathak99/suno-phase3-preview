@@ -27,6 +27,7 @@ export type MockAssessmentContext = {
   assessmentId: string;
   attemptNumber: number;
   passage: MockPassage;
+  purpose: "benchmark";
   student: MockStudent;
 };
 
@@ -98,6 +99,7 @@ export function getMockAssessmentContext(studentId: string): MockAssessmentConte
     assessmentId: mockDraftAssessmentId(student.id),
     attemptNumber: student.id === mockEmptyStudent.id ? 1 : 2,
     passage: mockPassage,
+    purpose: "benchmark",
     student,
   };
 }

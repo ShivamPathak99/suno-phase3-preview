@@ -5,7 +5,10 @@ import {
   parseAdaptiveAssessmentPayload,
   type AdaptiveAssessmentPayload,
 } from "@/lib/adaptive/confirmation";
-import { getPassageMetadata } from "@/lib/adaptive/passage-catalog";
+import { parseStoredAdaptiveWorksheet } from "@/lib/adaptive/card-view";
+import { getCuratedCard, passageMetadataForCuratedCard } from "@/lib/adaptive/card-catalog";
+import { getPassageMetadata, type PassageMeta } from "@/lib/adaptive/passage-catalog";
+import type { ReadingPurpose } from "@/lib/adaptive/types";
 import { analysisSchema, readingLevels, type ReadingAnalysis } from "@/lib/analysisSchema";
 import {
   confirmedAnalysisToEvidenceWords,
@@ -44,9 +47,14 @@ type ConfirmedAssessmentHistoryRecord = {
   analysis_json: unknown;
 };
 
+type PracticeWorksheetRecord = {
+  content_json: unknown;
+};
+
 type StoredAnalysis = {
   adaptive: AdaptiveAssessmentPayload | null;
   analysis: ReadingAnalysis;
+  purpose: ReadingPurpose;
 };
 
 function jsonError(error: string, status: number) {
@@ -92,8 +100,30 @@ function parseStoredAnalysis(value: unknown): StoredAnalysis | null {
   const { _adaptive, ...analysisValue } = value as Record<string, unknown>;
   const parsed = analysisSchema.safeParse(analysisValue);
 
+  const purpose =
+    typeof _adaptive === "object" &&
+    _adaptive !== null &&
+    !Array.isArray(_adaptive) &&
+    (_adaptive as { purpose?: unknown }).purpose === "focused_readback"
+      ? "focused_readback"
+      : "benchmark";
+
   return parsed.success
-    ? { adaptive: parseAdaptiveAssessmentPayload(_adaptive), analysis: parsed.data }
+    ? { adaptive: parseAdaptiveAssessmentPayload(_adaptive), analysis: parsed.data, purpose }
+    : null;
+}
+
+function practicePassageMetadata(value: unknown, passageId: string): PassageMeta | null {
+  const worksheet = parseStoredAdaptiveWorksheet(value);
+
+  if (!worksheet || worksheet.adaptive.passageId !== passageId) {
+    return null;
+  }
+
+  const card = getCuratedCard(worksheet.adaptive.cardId);
+
+  return card && card.focusSkillId === worksheet.adaptive.focusSkillId
+    ? passageMetadataForCuratedCard(card, passageId)
     : null;
 }
 
@@ -171,19 +201,30 @@ export async function POST(
       return jsonError("The saved transcript is invalid and cannot be confirmed.", 502);
     }
 
-    const [{ data: passage, error: passageError }, { data: student, error: studentError }] =
-      await Promise.all([
-        supabase
-          .from("passages")
-          .select("level")
-          .eq("id", draft.passage_id)
-          .maybeSingle<PassageRecord>(),
-        supabase
-          .from("students")
-          .select("name")
-          .eq("id", draft.student_id)
-          .maybeSingle<StudentRecord>(),
-      ]);
+    const [
+      { data: passage, error: passageError },
+      { data: student, error: studentError },
+      { data: practiceWorksheet, error: practiceWorksheetError },
+    ] = await Promise.all([
+      supabase
+        .from("passages")
+        .select("level")
+        .eq("id", draft.passage_id)
+        .maybeSingle<PassageRecord>(),
+      supabase
+        .from("students")
+        .select("name")
+        .eq("id", draft.student_id)
+        .maybeSingle<StudentRecord>(),
+      existingStoredAnalysis.purpose === "focused_readback"
+        ? supabase
+            .from("worksheets")
+            .select("content_json")
+            .contains("content_json", { adaptive: { passageId: draft.passage_id } })
+            .limit(1)
+            .maybeSingle<PracticeWorksheetRecord>()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
 
     if (passageError) {
       console.error("Assessment confirmation passage lookup failed.", passageError);
@@ -195,12 +236,27 @@ export async function POST(
       return jsonError("Couldn't load the student. Please try again.", 502);
     }
 
+    if (practiceWorksheetError) {
+      console.error("Practice card lookup failed.", practiceWorksheetError);
+      return jsonError("Couldn't load the practice card. Please try again.", 502);
+    }
+
     if (!passage || !isReadingLevel(passage.level)) {
       return jsonError("The assessment passage was not found.", 404);
     }
 
     if (!student) {
       return jsonError("The assessment student was not found.", 404);
+    }
+
+    const passageMetadata =
+      getPassageMetadata(draft.passage_id) ??
+      practicePassageMetadata(practiceWorksheet?.content_json, draft.passage_id) ??
+      undefined;
+
+    if (existingStoredAnalysis.purpose === "focused_readback" && !passageMetadata) {
+      console.error("Practice card metadata was unavailable.", assessmentId);
+      return jsonError("This practice card is unavailable for confirmation. Please start it again.", 502);
     }
 
     const confirmed = recomputeConfirmedReadingAnalysis({
@@ -226,7 +282,7 @@ export async function POST(
       assessment: {
         assessmentId: draft.id,
         occurredAt: draft.created_at,
-        purpose: "benchmark",
+        purpose: existingStoredAnalysis.purpose,
         studentId: draft.student_id,
         teacherConfirmed: true,
       },
@@ -235,7 +291,7 @@ export async function POST(
         const stored = parseStoredAnalysis(record.analysis_json);
         return stored?.adaptive ? [stored.adaptive] : [];
       }),
-      passage: getPassageMetadata(draft.passage_id) ?? undefined,
+      passage: passageMetadata,
       scope: { level: confirmed.analysis.level, studentName: student.name },
       wordOutcomes: confirmedAnalysisToEvidenceWords(
         confirmed.analysis,

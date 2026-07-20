@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         passage_id: input.passageId,
         audio_url: input.audioUrl,
         transcript_json: input.transcript,
-        analysis_json: result.analysis,
+        analysis_json: { ...result.analysis, _adaptive: { purpose: input.purpose } },
         level: result.analysis.level,
         wcpm: result.analysis.wcpm,
         accuracy: result.analysis.accuracy_pct,

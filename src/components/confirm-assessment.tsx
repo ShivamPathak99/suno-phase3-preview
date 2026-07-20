@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { FocusPanel } from "@/components/focus-panel";
+import { PracticeReadBanner } from "@/components/practice-read-banner";
 import type { FocusRecommendation } from "@/lib/adaptive/selection";
 import type { ReadingAnalysis } from "@/lib/analysisSchema";
 import type { ConfirmAssessmentResponse } from "@/lib/assessment-contract";
@@ -408,6 +409,10 @@ export function ConfirmAssessment({
             <span aria-hidden="true"> · attempt {context.attemptNumber}</span>
           </h1>
         </header>
+
+        {context.purpose === "focused_readback" ? (
+          <PracticeReadBanner studentName={context.student.name} />
+        ) : null}
 
         <div className="confirm-layout">
           <section className="confirm-passage-column" aria-labelledby="marked-passage-title">

@@ -34,6 +34,7 @@ export const analyzeRequestSchema = z
     studentId: z.string().uuid(),
     passageId: z.string().uuid(),
     audioUrl: z.string().url(),
+    purpose: z.enum(["benchmark", "focused_readback", "diagnostic"]).default("benchmark"),
     transcript: timestampedTranscriptSchema,
   })
   .strict();
