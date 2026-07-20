@@ -39,4 +39,42 @@ export const adaptiveConfig = {
       nonControlledBaselineFactor: 0.5,
     },
   },
+  profile: {
+    /** Spec §A2.4: decay is intentionally deferred in V1. */
+    recencyDecayMultiplier: 1,
+    /** Spec §A2.4. */
+    posteriorPrior: { alpha: 1, beta: 1 },
+    /** Spec §A2.4. */
+    lcb90ZScore: 1.28,
+    /** Spec §A2.4. */
+    recentErrorEwma: {
+      errorWeight: 0.3,
+      initialValue: 0,
+      retainedWeight: 0.7,
+    },
+    /** Spec §A2.5. */
+    reinforce: {
+      minimumEffectiveEvidence: 3,
+      minimumRecentErrorEwma: 0.45,
+    },
+    /** Spec §A2.5. */
+    mastery: {
+      automaticityLcb90: 0.6,
+      distinctWords: 4,
+      effectiveAccuracyEvidence: 10,
+      effectiveFluencyEvidence: 6,
+      highQualityFailureWeight: 0.85,
+      lastEventsToInspect: 5,
+      minimumPracticeDays: 2,
+      accuracyLcb90: 0.8,
+    },
+    /** Spec §A2.5. */
+    prerequisite: {
+      accuracyLcb90: 0.75,
+      effectiveEvidence: 6,
+    },
+    /** Spec §A2.5. */
+    reviewIntervalDays: 21,
+    millisecondsPerDay: 86_400_000,
+  },
 } as const;

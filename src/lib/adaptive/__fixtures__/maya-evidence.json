@@ -115,12 +115,12 @@
       "readings": 2
     },
     "profileSnapshot": {
-      "accuracyCreditTotal": 6.3,
-      "automaticityCreditTotal": 4.8,
-      "effectiveEvidence": 9,
-      "distinctWords": 9,
+      "accuracyCreditTotal": 4.2,
+      "automaticityCreditTotal": 3.4,
+      "effectiveEvidence": 6,
+      "distinctWords": 6,
       "separateDays": 2,
-      "recentErrorEwma": 0.5913,
+      "recentErrorEwma": 0.459,
       "state": "reinforce"
     },
     "focus": {
