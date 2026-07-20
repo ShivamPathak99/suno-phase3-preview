@@ -24,7 +24,7 @@
     "verify:analysis": "node --env-file=.env.local --import tsx scripts/verify-analysis-live.ts",
     "test:golden": "node --import tsx scripts/test-golden-harness.ts",
     "golden": "node --env-file=.env.local --import tsx scripts/golden.ts",
-    "test:worksheets": "node --import tsx scripts/test-worksheet-contract.ts",
+    "test:worksheets": "node --import tsx scripts/test-worksheet-contract.ts && node --import tsx scripts/test-adaptive-worksheet-route.ts",
     "verify:worksheets": "node --env-file=.env.local --import tsx scripts/verify-worksheet-live.ts",
     "test:worksheet-page": "node --import tsx scripts/test-worksheet-page-contract.ts"
   },

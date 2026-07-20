@@ -4,14 +4,23 @@ import { readingLevels } from "@/lib/analysisSchema";
 
 export const worksheetLanguages = ["en", "hi"] as const;
 
+export const adaptiveWorksheetRequestSchema = z
+  .object({
+    focusSkillId: z.string().trim().min(1).max(80).optional(),
+    studentId: z.string().uuid(),
+  })
+  .strict();
+
 export const worksheetRequestSchema = z
   .object({
+    adaptive: adaptiveWorksheetRequestSchema.optional(),
     level: z.enum(readingLevels),
     language: z.enum(worksheetLanguages),
   })
   .strict();
 
 export type WorksheetRequest = z.infer<typeof worksheetRequestSchema>;
+export type AdaptiveWorksheetRequest = z.infer<typeof adaptiveWorksheetRequestSchema>;
 
 /** The frozen C-4 worksheet response shape. */
 export const worksheetContentSchema = z
