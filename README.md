@@ -2,13 +2,15 @@
 
 Suno is a teacher-first oral-reading assessment workflow for early-grade classrooms.
 
-## Foundation setup
+For the current capabilities, screenshots, technical architecture, verification commands, and known demo limits, see [Suno Current Capabilities & Technical Guide](./docs/SUNO_CURRENT_CAPABILITIES.md).
+
+## Local setup
 
 1. Copy `.env.example` to `.env.local` and add the service credentials when they are available.
 2. Install dependencies with `npm.cmd install` on Windows or `npm install` elsewhere.
 3. Run `npm run dev`.
 
-The C-1 foundation intentionally contains no live OpenAI or Supabase calls. Those arrive through the frozen Agent A and Agent C tickets.
+The current build uses Supabase for seeded classroom data and direct signed audio uploads, OpenAI transcription for timestamped speech-to-text, and GPT-5.6 for strict reading analysis and worksheet generation.
 
 ## Supabase schema and demo seed
 
