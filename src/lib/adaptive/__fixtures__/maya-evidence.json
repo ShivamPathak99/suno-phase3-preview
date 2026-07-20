@@ -1,0 +1,132 @@
+{
+  "fixture": "adaptive-reading.maya.v1",
+  "student": {
+    "id": "fixture-maya",
+    "name": "Maya",
+    "level": "word"
+  },
+  "readings": [
+    {
+      "assessmentId": "fixture-maya-baseline-1",
+      "occurredAt": "2026-07-01T09:00:00.000Z",
+      "purpose": "benchmark",
+      "teacherConfirmed": true,
+      "tokens": [
+        {
+          "index": 0,
+          "normalizedText": "ship",
+          "primarySkillId": "en.digraph.sh",
+          "controlledExemplar": true,
+          "outcome": "correct",
+          "confidence": "high",
+          "teacherAction": "edited"
+        },
+        {
+          "index": 1,
+          "normalizedText": "shop",
+          "primarySkillId": "en.digraph.sh",
+          "controlledExemplar": true,
+          "outcome": "hesitation",
+          "confidence": "high",
+          "teacherAction": "edited"
+        },
+        {
+          "index": 2,
+          "normalizedText": "fish",
+          "primarySkillId": "en.digraph.sh",
+          "controlledExemplar": true,
+          "outcome": "correct",
+          "confidence": "high",
+          "teacherAction": "edited"
+        },
+        {
+          "index": 3,
+          "normalizedText": "shell",
+          "primarySkillId": "en.digraph.sh",
+          "controlledExemplar": true,
+          "outcome": "correct",
+          "confidence": "high",
+          "teacherAction": "edited"
+        },
+        {
+          "index": 4,
+          "normalizedText": "she",
+          "primarySkillId": "en.digraph.sh",
+          "controlledExemplar": true,
+          "outcome": "hesitation",
+          "confidence": "high",
+          "teacherAction": "edited"
+        }
+      ]
+    },
+    {
+      "assessmentId": "fixture-maya-baseline-2",
+      "occurredAt": "2026-07-08T09:00:00.000Z",
+      "purpose": "benchmark",
+      "teacherConfirmed": true,
+      "tokens": [
+        {
+          "index": 0,
+          "normalizedText": "dish",
+          "primarySkillId": "en.digraph.sh",
+          "controlledExemplar": true,
+          "outcome": "correct",
+          "confidence": "high",
+          "teacherAction": "edited"
+        },
+        {
+          "index": 1,
+          "normalizedText": "wish",
+          "primarySkillId": "en.digraph.sh",
+          "controlledExemplar": true,
+          "outcome": "substituted",
+          "heardAs": "wisp",
+          "confidence": "high",
+          "teacherAction": "edited"
+        },
+        {
+          "index": 2,
+          "normalizedText": "brush",
+          "primarySkillId": "en.digraph.sh",
+          "controlledExemplar": true,
+          "outcome": "substituted",
+          "heardAs": "bus",
+          "confidence": "high",
+          "teacherAction": "edited"
+        },
+        {
+          "index": 3,
+          "normalizedText": "shut",
+          "primarySkillId": "en.digraph.sh",
+          "controlledExemplar": true,
+          "outcome": "substituted",
+          "heardAs": "sut",
+          "confidence": "high",
+          "teacherAction": "edited"
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "evidenceSummary": {
+      "errors": 3,
+      "hesitations": 2,
+      "opportunities": 9,
+      "readings": 2
+    },
+    "profileSnapshot": {
+      "accuracyCreditTotal": 6.3,
+      "automaticityCreditTotal": 4.8,
+      "effectiveEvidence": 9,
+      "distinctWords": 9,
+      "separateDays": 2,
+      "recentErrorEwma": 0.5913,
+      "state": "reinforce"
+    },
+    "focus": {
+      "kind": "focused_card",
+      "skillId": "en.digraph.sh",
+      "reason": "3 substitutions and 2 hesitations across 9 chances in 2 readings."
+    }
+  }
+}

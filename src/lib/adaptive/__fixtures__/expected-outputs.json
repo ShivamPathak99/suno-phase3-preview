@@ -1,0 +1,22 @@
+{
+  "fixture": "adaptive-reading.expected-outputs.v1",
+  "maya": {
+    "focusSkillId": "en.digraph.sh",
+    "evidenceSummary": {
+      "errors": 3,
+      "hesitations": 2,
+      "opportunities": 9,
+      "readings": 2
+    }
+  },
+  "wordLevelGroup": {
+    "focusSkillId": "en.cvc.short_a",
+    "affectedStudents": 6,
+    "coverage": 0.75,
+    "reviewDueStudents": 2
+  },
+  "paragraphMixedGroup": {
+    "kind": "general_card",
+    "maximumAffectedStudents": 2
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "fixture": "adaptive-reading.paragraph-mixed-group.v1",
+  "level": "paragraph",
+  "students": [
+    {
+      "id": "fixture-paragraph-01",
+      "needBySkill": { "en.digraph.sh": 0.71 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-paragraph-02",
+      "needBySkill": { "en.digraph.sh": 0.56 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-paragraph-03",
+      "needBySkill": { "en.digraph.ch": 0.68 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-paragraph-04",
+      "needBySkill": { "en.digraph.ch": 0.52 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-paragraph-05",
+      "needBySkill": { "en.hfw.the": 0.64 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-paragraph-06",
+      "needBySkill": { "en.hfw.is": 0.59 },
+      "reviewDueSkillIds": []
+    }
+  ],
+  "expected": {
+    "recommendation": {
+      "kind": "general_card",
+      "reason": "Mixed needs — use a general paragraph card."
+    },
+    "maximumAffectedStudents": 2
+  }
+}

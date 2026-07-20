@@ -1,0 +1,56 @@
+{
+  "fixture": "adaptive-reading.word-group.v1",
+  "level": "word",
+  "students": [
+    {
+      "id": "fixture-word-01",
+      "needBySkill": { "en.cvc.short_a": 0.71 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-word-02",
+      "needBySkill": { "en.cvc.short_a": 0.65 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-word-03",
+      "needBySkill": { "en.cvc.short_a": 0.61 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-word-04",
+      "needBySkill": { "en.cvc.short_a": 0.58 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-word-05",
+      "needBySkill": { "en.cvc.short_a": 0.52 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-word-06",
+      "needBySkill": { "en.cvc.short_a": 0.48 },
+      "reviewDueSkillIds": []
+    },
+    {
+      "id": "fixture-word-07",
+      "needBySkill": { "en.cvc.short_a": 0.12 },
+      "reviewDueSkillIds": ["en.hfw.the"]
+    },
+    {
+      "id": "fixture-word-08",
+      "needBySkill": { "en.cvc.short_a": 0.18 },
+      "reviewDueSkillIds": ["en.hfw.is"]
+    }
+  ],
+  "expected": {
+    "recommendation": {
+      "kind": "focused_card",
+      "skillId": "en.cvc.short_a",
+      "affectedStudents": 6,
+      "coverage": 0.75,
+      "groupNeed": 0.48125
+    },
+    "reviewDueStudents": 2
+  }
+}
