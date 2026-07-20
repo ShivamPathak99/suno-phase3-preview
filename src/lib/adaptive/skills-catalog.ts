@@ -14,6 +14,8 @@ export type Skill = {
   aserBands: Array<"letter" | "word" | "paragraph" | "story">;
   prerequisites: SkillId[];
   practiceMode: "decode" | "automaticity";
+  /** Ownership stays explicit as additional subject catalogs join the engine. */
+  subject: import("./types").Subject;
   exampleWords: string[];
 };
 
@@ -30,6 +32,7 @@ export const readingSkillCatalog: Skill[] = [
     aserBands: ["word", "paragraph", "story"],
     prerequisites: [],
     practiceMode: "automaticity",
+    subject: "reading",
     exampleWords: ["the", "then", "there"],
   },
   {
@@ -40,6 +43,7 @@ export const readingSkillCatalog: Skill[] = [
     aserBands: ["word", "paragraph", "story"],
     prerequisites: [],
     practiceMode: "automaticity",
+    subject: "reading",
     exampleWords: ["is", "his", "this"],
   },
   {
@@ -50,6 +54,7 @@ export const readingSkillCatalog: Skill[] = [
     aserBands: ["word", "paragraph", "story"],
     prerequisites: [],
     practiceMode: "decode",
+    subject: "reading",
     exampleWords: ["cat", "map", "bag"],
   },
   {
@@ -60,6 +65,7 @@ export const readingSkillCatalog: Skill[] = [
     aserBands: ["word", "paragraph", "story"],
     prerequisites: [],
     practiceMode: "decode",
+    subject: "reading",
     exampleWords: ["sit", "pin", "fish"],
   },
   {
@@ -70,6 +76,7 @@ export const readingSkillCatalog: Skill[] = [
     aserBands: ["word", "paragraph", "story"],
     prerequisites: ["en.cvc.short_a", "en.cvc.short_i"],
     practiceMode: "decode",
+    subject: "reading",
     exampleWords: ["ship", "shop", "fish"],
   },
   {
@@ -80,6 +87,7 @@ export const readingSkillCatalog: Skill[] = [
     aserBands: ["word", "paragraph", "story"],
     prerequisites: ["en.cvc.short_a", "en.cvc.short_i"],
     practiceMode: "decode",
+    subject: "reading",
     exampleWords: ["chip", "chat", "much"],
   },
 ];
@@ -87,3 +95,6 @@ export const readingSkillCatalog: Skill[] = [
 export const readingSkillById: Record<SkillId, Skill> = Object.fromEntries(
   readingSkillCatalog.map((skill) => [skill.id, skill]),
 ) as Record<SkillId, Skill>;
+
+/** Subject-owned catalogs stay separate as Math V1 joins in P2-T17. */
+export const skillCatalogBySubject = { reading: readingSkillCatalog } as const;

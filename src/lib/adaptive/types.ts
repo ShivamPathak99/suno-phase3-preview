@@ -7,6 +7,7 @@ import type { SkillId } from "./skills-catalog";
  * from an API, database, or UI module.
  */
 export type AserLevel = "letter" | "word" | "paragraph" | "story";
+export type Subject = "reading" | "math";
 
 export type EvidenceOutcome =
   | "correct"

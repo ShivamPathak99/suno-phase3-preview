@@ -1,6 +1,7 @@
 import { adaptiveConfig } from "./config";
 import type { SkillEvidenceEvent } from "./evidence";
 import { readingSkillCatalog, type Skill, type SkillId } from "./skills-catalog";
+import type { Subject } from "./types";
 
 export type SkillState =
   | "locked"
@@ -44,6 +45,7 @@ export type BuildStudentProfileInput = {
   events: readonly SkillEvidenceEvent[];
   skills?: readonly Skill[];
   studentId: string;
+  subject?: Subject;
   teacherHoldSkillIds?: readonly SkillId[];
 };
 
@@ -178,6 +180,7 @@ export function buildStudentProfile({
   events,
   skills = readingSkillCatalog,
   studentId,
+  subject = "reading",
   teacherHoldSkillIds = [],
 }: BuildStudentProfileInput): StudentProfile {
   if (!Number.isFinite(Date.parse(asOf))) {
@@ -187,7 +190,12 @@ export function buildStudentProfile({
   const activeSkills = new Set(activeSkillIds);
   const heldSkills = new Set(teacherHoldSkillIds);
   const confirmedEvents = sortEvents(
-    events.filter((event) => event.studentId === studentId && event.teacherConfirmed),
+    events.filter(
+      (event) =>
+        event.studentId === studentId &&
+        event.teacherConfirmed &&
+        (event.subject ?? "reading") === subject,
+    ),
   );
   const eventsBySkill = new Map<SkillId, SkillEvidenceEvent[]>();
   for (const event of confirmedEvents) {

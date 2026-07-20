@@ -4,6 +4,7 @@ import type { SkillId } from "./skills-catalog";
 import type {
   EvidenceOutcome,
   ReadingPurpose,
+  Subject,
   TeacherWordConfirmation,
   WordConfidence,
 } from "./types";
@@ -11,6 +12,8 @@ import type {
 export type SkillEvidenceEvent = {
   v: "adaptive-evidence.v1";
   studentId: string;
+  /** Missing only for legacy reading evidence written before P2-T16. */
+  subject?: Subject;
   assessmentId: string;
   skillId: SkillId;
   occurredAt: string;
@@ -38,6 +41,8 @@ export type ConfirmedAssessmentForEvidence = {
   occurredAt: string;
   purpose: ReadingPurpose;
   studentId: string;
+  /** Missing only for legacy reading confirmations written before P2-T16. */
+  subject?: Subject;
   teacherConfirmed: boolean;
 };
 
@@ -184,6 +189,7 @@ export function extractSkillEvidence({
       purpose: assessment.purpose,
       skillId: token.primarySkillId,
       studentId: assessment.studentId,
+      subject: assessment.subject ?? "reading",
       teacherConfirmed: assessment.teacherConfirmed,
       v: "adaptive-evidence.v1",
       weight,

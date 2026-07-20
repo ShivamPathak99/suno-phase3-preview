@@ -1,7 +1,7 @@
 import { adaptiveConfig } from "./config";
 import type { StudentProfile, StudentSkillProfile } from "./profile";
 import { readingSkillCatalog, type Skill, type SkillId } from "./skills-catalog";
-import type { AserLevel } from "./types";
+import type { AserLevel, Subject } from "./types";
 
 export type FocusEvidenceSummary = {
   errors: number;
@@ -18,6 +18,7 @@ export type FocusHistoryEntry = {
 export type FocusScope = {
   level: AserLevel;
   studentName: string;
+  subject?: Subject;
 };
 
 export type FocusedCardRecommendation = {
@@ -164,7 +165,9 @@ export function chooseFocus({
   skills = readingSkillCatalog,
   teacherPin,
 }: ChooseFocusInput): FocusRecommendation {
-  const skillsInScope = skills.filter((skill) => skill.aserBands.includes(scope.level));
+  const skillsInScope = skills.filter(
+    (skill) => skill.aserBands.includes(scope.level) && skill.subject === (scope.subject ?? "reading"),
+  );
   const skillById = new Map(skills.map((skill) => [skill.id, skill]));
   const profileInScope = skillsInScope
     .map((skill) => ({ profile: profile.skills[skill.id], skill }))
