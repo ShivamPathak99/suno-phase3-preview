@@ -559,7 +559,12 @@ export function ConfirmAssessment({
               Re-record
             </Link>
             {isConfirmed && savedAdaptive ? (
-              <FocusPanel focus={savedAdaptive} studentName={context.student.name} />
+              <FocusPanel
+                focus={savedAdaptive}
+                passage={context.passage}
+                studentId={context.student.id}
+                studentName={context.student.name}
+              />
             ) : null}
           </aside>
         </div>

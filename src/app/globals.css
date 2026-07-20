@@ -2558,3 +2558,231 @@ input:focus-visible {
     border-color: #bbbbbb;
   }
 }
+
+/* P2-T11 — saved adaptive-card preview, child surface, and print sheet */
+.adaptive-card-page {
+  min-height: 100vh;
+  padding: 20px 16px 40px;
+}
+
+.adaptive-card-shell {
+  margin: 0 auto;
+  max-width: 800px;
+}
+
+.adaptive-card-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.adaptive-card-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adaptive-card-actions .primary-action,
+.adaptive-card-actions .secondary-action,
+.adaptive-card-child-action .primary-action {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+  text-decoration: none;
+}
+
+.adaptive-card-actions svg {
+  height: 18px;
+  width: 18px;
+}
+
+.adaptive-card-sheet {
+  background: var(--card);
+  border: 1px solid #dfe7e1;
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(29, 55, 46, 0.08);
+  overflow: hidden;
+}
+
+.adaptive-card-preview-heading {
+  align-items: center;
+  background: #eff7f3;
+  border-bottom: 1px solid #d6e8df;
+  color: #42665a;
+  display: flex;
+  font-size: 13px;
+  gap: 10px;
+  justify-content: space-between;
+  line-height: 19px;
+  padding: 12px 22px;
+}
+
+.adaptive-card-preview-heading p {
+  color: var(--board-dark);
+  font-weight: 700;
+  margin: 0;
+}
+
+.adaptive-card-content {
+  padding: 42px clamp(24px, 7vw, 64px) 40px;
+}
+
+.adaptive-card-kicker {
+  color: var(--board);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.adaptive-card-content h1 {
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: clamp(32px, 6vw, 48px);
+  line-height: 1.08;
+  margin: 0;
+}
+
+.adaptive-card-warmup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 28px 0 30px;
+}
+
+.adaptive-card-warmup span {
+  background: #fff7dd;
+  border: 1px solid #ead594;
+  border-radius: 999px;
+  color: #604b11;
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: 20px;
+  line-height: 1.2;
+  padding: 7px 14px;
+}
+
+.adaptive-card-story {
+  color: #26383b;
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: clamp(25px, 4.2vw, 32px);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.adaptive-card-target {
+  background: linear-gradient(transparent 74%, #d5ede1 0);
+  border-bottom: 2px dotted #5b9680;
+  padding-bottom: 1px;
+}
+
+.adaptive-card-question {
+  border-top: 1px solid #dce8e2;
+  margin-top: 34px;
+  padding-top: 22px;
+}
+
+.adaptive-card-question p {
+  color: var(--slate);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.adaptive-card-question h2 {
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: 22px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.adaptive-card-child-action {
+  display: flex;
+  justify-content: center;
+  padding: 0 24px 32px;
+}
+
+.adaptive-card-child-action .primary-action {
+  justify-content: center;
+  min-height: 52px;
+}
+
+.is-child-view {
+  align-items: center;
+  display: flex;
+  padding-bottom: 28px;
+  padding-top: 28px;
+}
+
+.is-child-view .adaptive-card-shell {
+  max-width: 680px;
+  width: 100%;
+}
+
+.is-child-view .adaptive-card-sheet {
+  border-radius: 24px;
+}
+
+.is-child-view .adaptive-card-content {
+  padding-bottom: 28px;
+}
+
+@media (max-width: 560px) {
+  .adaptive-card-page {
+    padding: 12px 12px 28px;
+  }
+
+  .adaptive-card-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .adaptive-card-actions {
+    width: 100%;
+  }
+
+  .adaptive-card-actions .primary-action,
+  .adaptive-card-actions .secondary-action {
+    justify-content: center;
+  }
+
+  .adaptive-card-preview-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media print {
+  .adaptive-card-page {
+    background: #ffffff;
+    padding: 0;
+  }
+
+  .adaptive-card-screen-chrome {
+    display: none !important;
+  }
+
+  .adaptive-card-shell {
+    max-width: none;
+  }
+
+  .adaptive-card-sheet {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .adaptive-card-content {
+    padding: 18mm 16mm;
+  }
+
+  .adaptive-card-target {
+    background: transparent;
+    border-bottom: 0;
+  }
+}

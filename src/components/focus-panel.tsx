@@ -1,16 +1,21 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { adaptivePracticePath } from "@/lib/adaptive/card-view";
 import type { FocusRecommendation } from "@/lib/adaptive/selection";
 import { readingSkillCatalog } from "@/lib/adaptive/skills-catalog";
+import type { AssessmentPassage } from "@/lib/assessment-types";
 
 type FocusPanelProps = {
   focus: FocusRecommendation;
+  passage: Pick<AssessmentPassage, "language" | "level">;
+  studentId: string;
   studentName: string;
 };
 
-type PanelAction = "choose" | "create" | "hold" | null;
+type PanelAction = "choose" | "hold" | null;
 
 const skillById = new Map(readingSkillCatalog.map((skill) => [skill.id, skill]));
 
@@ -47,11 +52,68 @@ function panelHeading(focus: FocusRecommendation, studentName: string) {
  * child-facing error language; the recommendation comes only from confirmed
  * evidence already persisted by the confirmation route.
  */
-export function FocusPanel({ focus, studentName }: FocusPanelProps) {
+export function FocusPanel({ focus, passage, studentId, studentName }: FocusPanelProps) {
+  const router = useRouter();
   const [action, setAction] = useState<PanelAction>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const skill = "skillId" in focus ? skillById.get(focus.skillId) : undefined;
   const evidence = focus.kind === "focused_card" ? focus.evidenceSummary : undefined;
   const stateLabel = focusStateLabel(focus);
+  const availableSkills = readingSkillCatalog.filter(
+    (candidate) =>
+      candidate.language === passage.language && candidate.aserBands.includes(passage.level),
+  );
+  const [chosenSkillId, setChosenSkillId] = useState<string | null>(
+    focus.kind === "focused_card" ? focus.skillId : null,
+  );
+
+  async function createCard() {
+    const focusSkillId = chosenSkillId ?? (focus.kind === "focused_card" ? focus.skillId : undefined);
+
+    if (!focusSkillId) {
+      setAction("choose");
+      return;
+    }
+
+    setCreateError(null);
+    setIsCreating(true);
+
+    try {
+      const response = await fetch("/api/worksheets", {
+        body: JSON.stringify({
+          adaptive: { focusSkillId, studentId },
+          language: passage.language,
+          level: passage.level,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      const payload: unknown = await response.json().catch(() => null);
+
+      if (
+        !response.ok ||
+        !payload ||
+        typeof payload !== "object" ||
+        typeof (payload as { worksheetId?: unknown }).worksheetId !== "string"
+      ) {
+        const message =
+          payload &&
+          typeof payload === "object" &&
+          typeof (payload as { error?: unknown }).error === "string"
+            ? (payload as { error: string }).error
+            : "Could not create this practice card. Try again.";
+        throw new Error(message);
+      }
+
+      router.push(adaptivePracticePath((payload as { worksheetId: string }).worksheetId));
+    } catch (error) {
+      setCreateError(
+        error instanceof Error ? error.message : "Could not create this practice card. Try again.",
+      );
+      setIsCreating(false);
+    }
+  }
 
   return (
     <section className="focus-panel" aria-labelledby="focus-panel-title">
@@ -94,8 +156,14 @@ export function FocusPanel({ focus, studentName }: FocusPanelProps) {
       ) : null}
 
       <div className="focus-panel-actions">
-        <button className="primary-action focus-create-action" onClick={() => setAction("create")} type="button">
-          Create card
+        <button
+          aria-busy={isCreating}
+          className="primary-action focus-create-action"
+          disabled={isCreating}
+          onClick={() => void createCard()}
+          type="button"
+        >
+          {isCreating ? "Creating card…" : "Create card"}
         </button>
         <button className="secondary-action focus-secondary-action" onClick={() => setAction("choose")} type="button">
           Choose another focus
@@ -105,19 +173,32 @@ export function FocusPanel({ focus, studentName }: FocusPanelProps) {
         </button>
       </div>
 
-      {action === "create" ? (
-        <p className="focus-panel-notice" role="status">
-          This recommendation is ready for a curated practice card. Card creation is the next step.
-        </p>
-      ) : null}
       {action === "choose" ? (
-        <p className="focus-panel-notice" role="status">
-          You can choose a different focus before creating the card; Suno will keep this confirmed result intact.
-        </p>
+        <div className="focus-panel-choice">
+          <label htmlFor="focus-skill-select">Choose the practice focus</label>
+          <select
+            id="focus-skill-select"
+            onChange={(event) => setChosenSkillId(event.target.value || null)}
+            value={chosenSkillId ?? ""}
+          >
+            <option value="">Choose a focus</option>
+            {availableSkills.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.displayName}
+              </option>
+            ))}
+          </select>
+          <p>The child&apos;s confirmed level stays unchanged.</p>
+        </div>
       ) : null}
       {action === "hold" ? (
         <p className="focus-panel-notice" role="status">
           No practice card will be created now. This never changes {studentName}&apos;s reading level.
+        </p>
+      ) : null}
+      {createError ? (
+        <p className="focus-panel-error" role="alert">
+          {createError}
         </p>
       ) : null}
     </section>
