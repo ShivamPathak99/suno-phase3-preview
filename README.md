@@ -20,6 +20,25 @@ The current build uses Supabase for seeded classroom data and direct signed audi
 
 The seed is idempotent and verifies that it created 20 demo students, 8 passages, and 20 confirmed assessments.
 
+## Phase 2 demo reset
+
+`reset-demo` is for a **Phase 2 preview/development Supabase project only**. Point `.env.local` at that project first; never use the production project or its credentials.
+
+Run a read-only preflight first:
+
+```powershell
+npm.cmd run reset-demo -- --dry-run
+```
+
+Then explicitly acknowledge the preview target in the same PowerShell session before resetting:
+
+```powershell
+$env:SUNO_DEMO_RESET_TARGET = "phase2-preview"
+npm.cmd run reset-demo
+```
+
+The command deletes only `students.is_demo = true` and assessments belonging to those students, then restores the deterministic seed. It leaves non-demo students, their assessments, and all worksheets untouched. Seed passages are inserted only when missing, so an existing shared passage is never overwritten.
+
 ## Audio storage
 
 Run `npm run setup:storage` to create or repair the public `audio` bucket. The command uses only the server-side Supabase key and is safe to re-run.

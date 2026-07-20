@@ -1,4 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 type Level = "letter" | "word" | "paragraph" | "story";
 type Language = "en" | "hi";
@@ -132,6 +134,11 @@ const students: Student[] = [
   level: level as Level,
 }));
 
+export const demoStudentIds = students.map((student) => student.id);
+export const demoAssessmentIds = students.map(
+  (_, index) => `30000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+);
+
 const levelProfiles: Record<
   Level,
   {
@@ -217,11 +224,6 @@ function makeAnalysis(level: Level, passage: Passage, variation: number): Analys
   };
 }
 
-function fail(message: string): never {
-  console.error(`Seed failed: ${message}`);
-  process.exit(1);
-}
-
 function describeError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
@@ -249,64 +251,77 @@ function describeError(error: unknown) {
   return "Unknown error";
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export function createDemoSupabaseAdminClient(): SupabaseClient {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !serviceRoleKey) {
-  fail(
-    "NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in .env.local.",
-  );
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in .env.local.",
+    );
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      persistSession: false,
+    },
+  });
 }
 
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
-  auth: {
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-    persistSession: false,
-  },
-});
-
-async function upsert(table: string, rows: unknown[]) {
-  const { error } = await supabase.from(table).upsert(rows, { onConflict: "id" });
+async function upsert(
+  supabase: SupabaseClient,
+  table: string,
+  rows: unknown[],
+  ignoreExistingRows = false,
+) {
+  const { error } = await supabase.from(table).upsert(rows, {
+    onConflict: "id",
+    ignoreDuplicates: ignoreExistingRows,
+  });
 
   if (error) {
     throw error;
   }
 }
 
-async function main() {
-  try {
-    await upsert(
-      "passages",
-      passages.map(({ id, level, language, title, body }) => ({
+export async function seedDemoData(supabase: SupabaseClient) {
+  await upsert(
+    supabase,
+    "passages",
+    passages.map(({ id, level, language, title, body }) => ({
         id,
         level,
         language,
         title,
         body,
-      })),
-    );
+    })),
+    true,
+  );
 
-    await upsert(
-      "students",
-      students.map(({ id, name, grade, avatar_seed, is_demo }) => ({
+  await upsert(
+    supabase,
+    "students",
+    students.map(({ id, name, grade, avatar_seed, is_demo }) => ({
         id,
         name,
         grade,
         avatar_seed,
         is_demo,
-      })),
-    );
+    })),
+  );
 
-    const englishPassageByLevel = new Map(
-      passages
-        .filter((passage) => passage.language === "en")
-        .map((passage) => [passage.level, passage]),
-    );
+  const englishPassageByLevel = new Map(
+    passages
+      .filter((passage) => passage.language === "en")
+      .map((passage) => [passage.level, passage]),
+  );
 
-    await upsert(
-      "assessments",
-      students.map((student, index) => {
+  await upsert(
+    supabase,
+    "assessments",
+    students.map((student, index) => {
         const passage = englishPassageByLevel.get(student.level);
 
         if (!passage) {
@@ -321,7 +336,7 @@ async function main() {
         }));
 
         return {
-          id: `30000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+          id: demoAssessmentIds[index],
           student_id: student.id,
           passage_id: passage.id,
           audio_url: null,
@@ -336,27 +351,50 @@ async function main() {
           teacher_confirmed: true,
           created_at: new Date(Date.UTC(2026, 6, 18, 8, index, 0)).toISOString(),
         };
-      }),
+    }),
+  );
+
+  const [{ count: studentCount, error: studentCountError }, { count: passageCount, error: passageCountError }, { count: assessmentCount, error: assessmentCountError }] =
+    await Promise.all([
+      supabase
+        .from("students")
+        .select("*", { count: "exact", head: true })
+        .eq("is_demo", true),
+      supabase
+        .from("passages")
+        .select("*", { count: "exact", head: true })
+        .in(
+          "id",
+          passages.map((passage) => passage.id),
+        ),
+      supabase
+        .from("assessments")
+        .select("*", { count: "exact", head: true })
+        .in(
+          "student_id",
+          students.map((student) => student.id),
+        ),
+    ]);
+
+  if (studentCountError || passageCountError || assessmentCountError) {
+    throw studentCountError ?? passageCountError ?? assessmentCountError;
+  }
+
+  if (studentCount !== 20 || passageCount !== 8 || assessmentCount !== 20) {
+    throw new Error(
+      `Unexpected demo seed counts: students=${studentCount}, passages=${passageCount}, assessments=${assessmentCount}.`,
     );
+  }
 
-    const [{ count: studentCount, error: studentCountError }, { count: passageCount, error: passageCountError }, { count: assessmentCount, error: assessmentCountError }] =
-      await Promise.all([
-        supabase.from("students").select("*", { count: "exact", head: true }),
-        supabase.from("passages").select("*", { count: "exact", head: true }),
-        supabase.from("assessments").select("*", { count: "exact", head: true }),
-      ]);
+  return { assessmentCount, passageCount, studentCount };
+}
 
-    if (studentCountError || passageCountError || assessmentCountError) {
-      throw studentCountError ?? passageCountError ?? assessmentCountError;
-    }
-
-    if (studentCount !== 20 || passageCount !== 8 || assessmentCount !== 20) {
-      throw new Error(
-        `Unexpected seed counts: students=${studentCount}, passages=${passageCount}, assessments=${assessmentCount}.`,
-      );
-    }
-
-    console.log("Seed complete: 20 students, 8 passages, 20 confirmed assessments.");
+async function main() {
+  try {
+    const result = await seedDemoData(createDemoSupabaseAdminClient());
+    console.log(
+      `Seed complete: ${result.studentCount} demo students, ${result.passageCount} passages, ${result.assessmentCount} confirmed demo assessments.`,
+    );
   } catch (error) {
     const message = describeError(error);
 
@@ -372,4 +410,10 @@ async function main() {
   }
 }
 
-void main();
+const isDirectExecution =
+  process.argv[1] !== undefined &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectExecution) {
+  void main();
+}
