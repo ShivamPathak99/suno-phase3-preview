@@ -95,6 +95,13 @@ export const adaptiveConfig = {
     minimumCoverage: 0.35,
   },
   math: {
+    /** Spec §B2/B4 — bug evidence is split when patterns overlap. */
+    diagnosis: {
+      autoMatchReliability: 0.85,
+      confirmationMinimumDistinctItems: 2,
+      confirmationScore: 2,
+      teacherReviewedReliability: 1,
+    },
     /** Spec §B3 — all deterministic item-generation bounds. */
     generator: {
       maximumDigit: 9,

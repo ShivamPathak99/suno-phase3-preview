@@ -1,0 +1,56 @@
+{
+  "studentId": "demo-student-arjun",
+  "responses": [
+    {
+      "answer": 62,
+      "item": {
+        "a": 47,
+        "answer": 72,
+        "b": 25,
+        "bugPredictions": {
+          "add.carry_added_twice": 82,
+          "add.carry_as_digit": 612,
+          "add.dropped_carry": 62,
+          "add.no_place_value": 18
+        },
+        "id": "arjun-carry-1",
+        "op": "+",
+        "skillId": "math.add.carry"
+      }
+    },
+    {
+      "answer": 53,
+      "item": {
+        "a": 36,
+        "answer": 63,
+        "b": 27,
+        "bugPredictions": {
+          "add.carry_added_twice": 73,
+          "add.carry_as_digit": 513,
+          "add.dropped_carry": 53,
+          "add.no_place_value": 18
+        },
+        "id": "arjun-carry-2",
+        "op": "+",
+        "skillId": "math.add.carry"
+      }
+    },
+    {
+      "answer": 65,
+      "item": {
+        "a": 58,
+        "answer": 75,
+        "b": 17,
+        "bugPredictions": {
+          "add.carry_added_twice": 85,
+          "add.carry_as_digit": 415,
+          "add.dropped_carry": 65,
+          "add.no_place_value": 21
+        },
+        "id": "arjun-carry-3",
+        "op": "+",
+        "skillId": "math.add.carry"
+      }
+    }
+  ]
+}
