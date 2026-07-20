@@ -4,6 +4,18 @@
  * needed.
  */
 export const adaptiveConfig = {
+  /** Spec §A3 — deterministic curated-card quality thresholds. */
+  content: {
+    card: {
+      targetOccurrences: { maximum: 5, minimum: 3 },
+      targetWordTypes: { minimum: 3 },
+      warmUpWords: { maximum: 4, minimum: 3 },
+      wordCountByLevel: {
+        paragraph: { maximum: 80, minimum: 40 },
+        word: { maximum: 45, minimum: 20 },
+      },
+    },
+  },
   evidence: {
     /** Spec §A2.2. */
     credits: {
