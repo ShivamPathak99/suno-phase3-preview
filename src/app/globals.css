@@ -998,9 +998,161 @@ input:focus-visible {
   margin: -4px 0 0;
 }
 
+.confirmation-saved {
+  align-items: center;
+  background: #eaf3ef;
+  border: 1px solid #a8cfc4;
+  border-radius: 10px;
+  color: var(--board-dark);
+  display: flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 8px;
+  line-height: 20px;
+  margin: 0;
+  min-height: 56px;
+  padding: 12px 14px;
+}
+
+.confirmation-saved svg {
+  flex: 0 0 auto;
+  height: 20px;
+  width: 20px;
+}
+
 .confirm-rerecord {
   justify-self: start;
   padding-left: 0;
+}
+
+/* P2-T8 — teacher-only adaptive follow-up; never uses level or pen colors. */
+.focus-panel {
+  background: var(--card);
+  border: 1px solid var(--ruling);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgb(30 43 51 / 6%);
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.focus-panel-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.focus-panel-kicker {
+  color: var(--slate);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  line-height: 18px;
+  margin: 0;
+}
+
+.focus-panel h2 {
+  color: var(--ink);
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 28px;
+  margin: 0;
+}
+
+.focus-chip-row,
+.focus-evidence-chips,
+.focus-alternatives,
+.focus-panel-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.focus-skill-chip,
+.focus-state-chip,
+.focus-evidence-chips li,
+.focus-alternatives li {
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 18px;
+  min-height: 28px;
+  padding: 5px 10px;
+}
+
+.focus-skill-chip {
+  background: #eaf3ef;
+  border: 1px solid #a8cfc4;
+  color: var(--board-dark);
+  font-weight: 600;
+}
+
+.focus-state-chip {
+  background: var(--paper);
+  border: 1px solid var(--ruling);
+  color: var(--slate);
+  text-transform: lowercase;
+}
+
+.focus-reason {
+  border-left: 3px solid var(--board);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 24px;
+  margin: 0;
+  padding-left: 14px;
+}
+
+.focus-evidence-chips,
+.focus-alternatives {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.focus-evidence-chips li,
+.focus-alternatives li {
+  background: var(--paper);
+  border: 1px solid var(--ruling);
+  color: var(--slate);
+}
+
+.focus-alternatives li {
+  color: var(--ink);
+}
+
+.focus-panel-actions {
+  align-items: stretch;
+  border-top: 1px solid var(--ruling);
+  margin-top: 2px;
+  padding-top: 14px;
+}
+
+.focus-create-action,
+.focus-secondary-action {
+  min-height: 48px;
+}
+
+.focus-create-action {
+  flex: 1 1 150px;
+}
+
+.focus-secondary-action {
+  flex: 1 1 140px;
+}
+
+.focus-panel-actions .quiet-action {
+  text-align: center;
+}
+
+.focus-panel-notice {
+  background: var(--paper);
+  border: 1px dashed var(--ruling);
+  border-radius: 10px;
+  color: var(--slate);
+  font-size: 13px;
+  line-height: 18px;
+  margin: 0;
+  padding: 10px 12px;
 }
 
 .word-editor-backdrop {

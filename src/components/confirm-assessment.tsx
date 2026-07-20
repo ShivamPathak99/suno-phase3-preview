@@ -12,6 +12,8 @@ import {
   useState,
 } from "react";
 
+import { FocusPanel } from "@/components/focus-panel";
+import type { FocusRecommendation } from "@/lib/adaptive/selection";
 import type { ReadingAnalysis } from "@/lib/analysisSchema";
 import type { ConfirmAssessmentResponse } from "@/lib/assessment-contract";
 import type { AssessmentContext, ReadingLevel } from "@/lib/assessment-types";
@@ -37,6 +39,7 @@ type ConfirmAssessmentProps = {
   analysis: ReadingAnalysis;
   assessmentId: string;
   context: AssessmentContext;
+  initialAdaptive?: FocusRecommendation;
   /** The explicit visual fixture keeps its no-network behaviour. */
   isMock?: boolean;
 };
@@ -159,7 +162,13 @@ function displaySummary(summary: string, studentName: string) {
   return summary.replace(/\bRavi\b/gu, studentName).replace(/\bHe\b/gu, "The student");
 }
 
-export function ConfirmAssessment({ analysis, assessmentId, context, isMock = false }: ConfirmAssessmentProps) {
+export function ConfirmAssessment({
+  analysis,
+  assessmentId,
+  context,
+  initialAdaptive,
+  isMock = false,
+}: ConfirmAssessmentProps) {
   const [overrides, setOverrides] = useState<Record<number, WordOverride>>({});
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [heardAsDraft, setHeardAsDraft] = useState("");
@@ -167,6 +176,8 @@ export function ConfirmAssessment({ analysis, assessmentId, context, isMock = fa
   const [overrideNotice, setOverrideNotice] = useState("");
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmationError, setConfirmationError] = useState("");
+  const [savedAdaptive, setSavedAdaptive] = useState<FocusRecommendation | undefined>(initialAdaptive);
+  const [isConfirmed, setIsConfirmed] = useState(initialAdaptive !== undefined);
 
   const dialogRef = useRef<HTMLElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -258,6 +269,10 @@ export function ConfirmAssessment({ analysis, assessmentId, context, isMock = fa
     setConfirmationError("");
 
     if (isMock) {
+      if (initialAdaptive) {
+        return;
+      }
+
       router.push(
         "/?confirmed=" +
           encodeURIComponent(context.student.id) +
@@ -303,14 +318,25 @@ export function ConfirmAssessment({ analysis, assessmentId, context, isMock = fa
         );
       }
 
-      router.push("/?assessmentId=" + encodeURIComponent(payload.assessment.id));
+      setSavedAdaptive(payload.adaptive);
+      setIsConfirmed(true);
+      setIsConfirming(false);
     } catch (error) {
       setConfirmationError(
         error instanceof Error ? error.message : "Couldn't confirm the assessment. Please try again.",
       );
       setIsConfirming(false);
     }
-  }, [analysis.level, assessmentId, context.student.id, isConfirming, isMock, overrides, router]);
+  }, [
+    analysis.level,
+    assessmentId,
+    context.student.id,
+    initialAdaptive,
+    isConfirming,
+    isMock,
+    overrides,
+    router,
+  ]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -503,21 +529,27 @@ export function ConfirmAssessment({ analysis, assessmentId, context, isMock = fa
               “{displaySummary(analysis.summary_for_teacher, context.student.name)}”
             </blockquote>
 
-            <button
-              aria-busy={isConfirming}
-              className="primary-action confirm-level-action"
-              disabled={isConfirming}
-              onClick={() => void confirmLevel()}
-              type="button"
-            >
-              {isConfirming ? (
-                "Confirming…"
-              ) : (
-                <>
-                  Confirm level <CheckIcon />
-                </>
-              )}
-            </button>
+            {isConfirmed ? (
+              <p className="confirmation-saved" role="status">
+                <CheckIcon /> Level confirmed. The next practice is ready below.
+              </p>
+            ) : (
+              <button
+                aria-busy={isConfirming}
+                className="primary-action confirm-level-action"
+                disabled={isConfirming}
+                onClick={() => void confirmLevel()}
+                type="button"
+              >
+                {isConfirming ? (
+                  "Confirming…"
+                ) : (
+                  <>
+                    Confirm level <CheckIcon />
+                  </>
+                )}
+              </button>
+            )}
             {confirmationError ? (
               <p className="confirmation-error" role="alert">
                 {confirmationError}
@@ -526,6 +558,9 @@ export function ConfirmAssessment({ analysis, assessmentId, context, isMock = fa
             <Link className="quiet-action confirm-rerecord" href={"/assess/" + context.student.id}>
               Re-record
             </Link>
+            {isConfirmed && savedAdaptive ? (
+              <FocusPanel focus={savedAdaptive} studentName={context.student.name} />
+            ) : null}
           </aside>
         </div>
 

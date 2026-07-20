@@ -4,6 +4,10 @@ import { AssessFlow } from "@/components/assess-flow";
 import { ConfirmAssessment } from "@/components/confirm-assessment";
 import { parseAssessDebugMode } from "@/lib/assess-debug";
 import {
+  getFocusPanelDebugRecommendation,
+  parseFocusPanelDebugMode,
+} from "@/lib/adaptive/focus-panel-fixtures";
+import {
   loadLiveAssessmentContext,
   loadLiveDraftAssessment,
 } from "@/lib/live-assessment-context";
@@ -42,15 +46,20 @@ function isUuid(value: string | undefined) {
 export default async function AssessPage({ params, searchParams }: AssessPageProps) {
   const [{ studentId }, query] = await Promise.all([params, searchParams]);
   const debugMode = parseAssessDebugMode(singleValue(query.debug));
+  const focusPanelDebugMode = parseFocusPanelDebugMode(singleValue(query.debug));
 
   if (singleValue(query.mock) === "confirm") {
     const mockContext = getMockAssessmentContext(studentId);
+    const initialAdaptive = focusPanelDebugMode
+      ? getFocusPanelDebugRecommendation(focusPanelDebugMode, mockContext.student.name)
+      : undefined;
 
     return (
       <ConfirmAssessment
         analysis={mockReadingAnalysis}
         assessmentId={mockContext.assessmentId}
         context={mockContext}
+        initialAdaptive={initialAdaptive}
         isMock
       />
     );
