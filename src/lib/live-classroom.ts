@@ -1,4 +1,9 @@
 import { readingLevels } from "@/lib/analysisSchema";
+import { parseAdaptiveAssessmentPayload } from "@/lib/adaptive/confirmation";
+import { chooseGroupFocus, type GroupStudentNeed } from "@/lib/adaptive/grouping";
+import { buildStudentProfile } from "@/lib/adaptive/profile";
+import { needForSkill } from "@/lib/adaptive/selection";
+import { readingSkillCatalog } from "@/lib/adaptive/skills-catalog";
 import type { ReadingLevel } from "@/lib/assessment-types";
 import {
   type DashboardStudent,
@@ -128,9 +133,57 @@ export function buildLiveClassroom({
       number: index + 1,
     }));
   const confirmedStudent = dashboardStudents.find((student) => student.isNewlyConfirmed) ?? null;
+  const groupRecommendations = {} as MockClassroom["groupRecommendations"];
+
+  for (const group of groups) {
+    const groupStudents: GroupStudentNeed[] = dashboardStudents
+      .filter((student) => student.level === group.level)
+      .map((student) => {
+        const studentAssessments = confirmedAssessments.filter(
+          (assessment) => assessment.student_id === student.id,
+        );
+        const adaptiveAssessments = studentAssessments.flatMap((assessment) => {
+          const value =
+            typeof assessment.analysis_json === "object" && assessment.analysis_json !== null
+              ? (assessment.analysis_json as { _adaptive?: unknown })._adaptive
+              : undefined;
+          const adaptive = parseAdaptiveAssessmentPayload(value);
+          return adaptive ? [adaptive] : [];
+        });
+        const events = adaptiveAssessments.flatMap((adaptive) => adaptive.evidence);
+        const asOf = events.reduce(
+          (latest, event) => (event.occurredAt > latest ? event.occurredAt : latest),
+          student.lastAssessedAt,
+        );
+        const profile = buildStudentProfile({
+          asOf,
+          confirmedReadingCount: studentAssessments.length,
+          events,
+          studentId: student.id,
+        });
+
+        return {
+          id: student.id,
+          needBySkill: Object.fromEntries(
+            readingSkillCatalog
+              .filter((skill) => ["active", "reinforce", "review_due"].includes(profile.skills[skill.id].state))
+              .map((skill) => [skill.id, needForSkill(profile.skills[skill.id])]),
+          ) as GroupStudentNeed["needBySkill"],
+          reviewDueSkillIds: readingSkillCatalog
+            .filter((skill) => profile.skills[skill.id].state === "review_due")
+            .map((skill) => skill.id),
+        };
+      });
+
+    groupRecommendations[group.level] = chooseGroupFocus({
+      level: group.level,
+      students: groupStudents,
+    });
+  }
 
   return {
     confirmedStudent,
+    groupRecommendations,
     groups,
     levelCounts,
     students: dashboardStudents,

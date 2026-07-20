@@ -1,4 +1,5 @@
 import { readingLevels } from "@/lib/analysisSchema";
+import type { GroupRecommendation } from "@/lib/adaptive/grouping";
 import {
   mockDraftAssessmentId,
   mockEmptyStudent,
@@ -32,6 +33,7 @@ export type UnassessedStudent = {
 
 export type MockClassroom = {
   confirmedStudent: DashboardStudent | null;
+  groupRecommendations: Partial<Record<ReadingLevel, GroupRecommendation>>;
   groups: SuggestedGroup[];
   levelCounts: Record<ReadingLevel, number>;
   students: DashboardStudent[];
@@ -124,7 +126,23 @@ export function getMockClassroom(
       ? [{ id: mockEmptyStudent.id, name: mockEmptyStudent.name }]
       : [];
 
-  return { confirmedStudent, groups, levelCounts, students, unassessedStudents };
+  return {
+    confirmedStudent,
+    groupRecommendations: Object.fromEntries(
+      groups.map((group) => [
+        group.level,
+        {
+          kind: "general_card" as const,
+          reason: `Mixed needs — use a general ${group.level} card.`,
+          reviewDueStudents: 0,
+        },
+      ]),
+    ),
+    groups,
+    levelCounts,
+    students,
+    unassessedStudents,
+  };
 }
 
 function ordinal(value: number) {

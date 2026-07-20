@@ -7,9 +7,18 @@ export const worksheetLanguages = ["en", "hi"] as const;
 export const adaptiveWorksheetRequestSchema = z
   .object({
     focusSkillId: z.string().trim().min(1).max(80).optional(),
-    studentId: z.string().uuid(),
+    groupStudentIds: z.array(z.string().uuid()).min(3).max(40).optional(),
+    studentId: z.string().uuid().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if ((value.studentId === undefined) === (value.groupStudentIds === undefined)) {
+      context.addIssue({
+        code: "custom",
+        message: "Provide exactly one studentId or groupStudentIds list.",
+      });
+    }
+  });
 
 export const worksheetRequestSchema = z
   .object({

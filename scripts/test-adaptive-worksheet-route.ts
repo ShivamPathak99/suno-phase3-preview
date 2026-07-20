@@ -204,6 +204,31 @@ assert.equal(directPayload.adaptive.passageId, "passage-created");
 assert.equal(directFixture.insertedPassages.length, 1);
 assert.equal(directFixture.insertedWorksheets.length, 1);
 
+const groupFixture = createSupabaseFixture();
+const groupHandler = createWorksheetPostHandler({
+  createSupabaseAdminClient: () => groupFixture.client,
+  generateWorksheet: async () => {
+    throw new Error("Group cards must use the curated catalog, never GPT.");
+  },
+});
+const groupResponse = await groupHandler(
+  requestFor({
+    adaptive: {
+      focusSkillId: "en.digraph.sh",
+      groupStudentIds: [
+        studentId,
+        "10000000-0000-4000-8000-000000000002",
+        "10000000-0000-4000-8000-000000000003",
+      ],
+    },
+    language: "en",
+    level: "word",
+  }),
+);
+assert.equal(groupResponse.status, 200);
+assert.equal((await groupResponse.json()).adaptive.mode, "group");
+assert.equal(groupFixture.insertedWorksheets.length, 1);
+
 const resolvedFixture = createSupabaseFixture({
   history: [
     evidence("maya-one", "2026-07-01T09:00:00.000Z"),

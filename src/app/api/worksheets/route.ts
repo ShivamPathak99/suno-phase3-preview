@@ -216,9 +216,54 @@ export function createWorksheetPostHandler(
 
     try {
       const supabase = dependencies.createSupabaseAdminClient() as SupabaseClientLike;
+
+      if (adaptiveRequest.groupStudentIds) {
+        if (!adaptiveRequest.focusSkillId) {
+          return jsonError("Choose a common practice focus before creating a group card.", 422);
+        }
+
+        const groupId = "group:" + [...adaptiveRequest.groupStudentIds].sort().join(":");
+        const plan = planAdaptiveWorksheet({
+          assessments: [],
+          mostRecentCardId: null,
+          requestedFocusSkillId: adaptiveRequest.focusSkillId,
+          scope: {
+            ...scope,
+            studentId: groupId,
+            studentName: "this group",
+          },
+        });
+        const provisionalContent = createAdaptiveWorksheetContent({
+          card: plan.card,
+          focus: plan.focus,
+          mode: "group",
+          passageId: "pending",
+          qualityChecks: plan.qualityChecks,
+          studentId: groupId,
+        });
+        const persisted = await insertAdaptiveWorksheet(supabase, {
+          contentJson: provisionalContent,
+          language: input.data.language,
+          level: input.data.level,
+          title: plan.card.title,
+        });
+
+        return NextResponse.json({
+          adaptive: persisted.contentJson.adaptive,
+          content: persisted.contentJson.content,
+          passageId: persisted.passageId,
+          worksheetId: persisted.worksheetId,
+        });
+      }
+
+      if (!adaptiveRequest.studentId) {
+        return jsonError("A student is required for an individual practice card.", 400);
+      }
+      const studentId = adaptiveRequest.studentId;
+
       const { historyResult, studentResult, worksheetsResult } = await loadAdaptiveWorksheetContext(
         supabase,
-        adaptiveRequest.studentId,
+        studentId,
       );
 
       if (studentResult.error || historyResult.error || worksheetsResult.error) {
@@ -237,7 +282,7 @@ export function createWorksheetPostHandler(
         return adaptive ? [adaptive] : [];
       });
       const mostRecentCardId = (worksheetsResult.data ?? [])
-        .map((record) => mostRecentAdaptiveCardId(record.content_json, adaptiveRequest.studentId))
+        .map((record) => mostRecentAdaptiveCardId(record.content_json, studentId))
         .find((cardId): cardId is string => cardId !== null);
       const plan = planAdaptiveWorksheet({
         assessments,
@@ -258,7 +303,7 @@ export function createWorksheetPostHandler(
         focus: plan.focus,
         passageId: "pending",
         qualityChecks: plan.qualityChecks,
-        studentId: adaptiveRequest.studentId,
+        studentId,
       });
       const persisted = await insertAdaptiveWorksheet(supabase, {
         contentJson: provisionalContent,

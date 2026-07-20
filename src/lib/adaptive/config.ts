@@ -89,6 +89,11 @@ export const adaptiveConfig = {
     reviewIntervalDays: 21,
     millisecondsPerDay: 86_400_000,
   },
+  grouping: {
+    /** Spec §A2.7. */
+    minimumAffectedStudents: 3,
+    minimumCoverage: 0.35,
+  },
   selection: {
     /** Spec §A2.6. */
     coldStart: {

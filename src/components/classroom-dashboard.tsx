@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { adaptivePracticePath } from "@/lib/adaptive/card-view";
+import type { GroupRecommendation } from "@/lib/adaptive/grouping";
 import {
   assessmentCaption,
   type DashboardStudent,
@@ -14,6 +17,7 @@ import type { ReadingLevel } from "@/lib/mock-assessment";
 
 type ClassroomDashboardProps = {
   confirmedStudent: DashboardStudent | null;
+  groupRecommendations: Partial<Record<ReadingLevel, GroupRecommendation>>;
   groups: SuggestedGroup[];
   levelCounts: Record<ReadingLevel, number>;
   students: DashboardStudent[];
@@ -36,6 +40,86 @@ const trendLabels = {
 
 function childCountLabel(count: number) {
   return count + (count === 1 ? " child" : " children");
+}
+
+function GroupActionCard({
+  level,
+  recommendation,
+  studentIds,
+}: {
+  level: ReadingLevel;
+  recommendation: GroupRecommendation;
+  studentIds: string[];
+}) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  async function createFocusedCard() {
+    if (recommendation.kind !== "focused_card") {
+      return;
+    }
+
+    setError(null);
+    setIsCreating(true);
+    try {
+      const response = await fetch("/api/worksheets", {
+        body: JSON.stringify({
+          adaptive: { focusSkillId: recommendation.skillId, groupStudentIds: studentIds },
+          language: "en",
+          level,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+      const payload: unknown = await response.json().catch(() => null);
+
+      if (
+        !response.ok ||
+        !payload ||
+        typeof payload !== "object" ||
+        typeof (payload as { worksheetId?: unknown }).worksheetId !== "string"
+      ) {
+        const message =
+          payload &&
+          typeof payload === "object" &&
+          typeof (payload as { error?: unknown }).error === "string"
+            ? (payload as { error: string }).error
+            : "Could not create this group card. Try again.";
+        throw new Error(message);
+      }
+
+      router.push(adaptivePracticePath((payload as { worksheetId: string }).worksheetId));
+    } catch (creationError) {
+      setError(creationError instanceof Error ? creationError.message : "Could not create this group card.");
+      setIsCreating(false);
+    }
+  }
+
+  return (
+    <aside className="group-action-card">
+      {recommendation.kind === "focused_card" ? (
+        <>
+          <p>Common practice</p>
+          <h3>{recommendation.reason}</h3>
+          <span>
+            {recommendation.affectedStudents} of {studentIds.length} children · {recommendation.reviewDueStudents} ready to review
+          </span>
+          <button disabled={isCreating} onClick={() => void createFocusedCard()} type="button">
+            {isCreating ? "Creating…" : "Create group card"}
+          </button>
+        </>
+      ) : (
+        <>
+          <p>Group practice</p>
+          <h3>{recommendation.reason}</h3>
+          <span>{recommendation.reviewDueStudents} ready to review</span>
+          <Link href={worksheetPath(level)}>Create general card</Link>
+        </>
+      )}
+      {error ? <span className="group-action-error" role="alert">{error}</span> : null}
+    </aside>
+  );
 }
 
 function LevelIcon({ level }: { level: ReadingLevel }) {
@@ -150,6 +234,7 @@ function UnassessedStudentCard({ student }: { student: UnassessedStudent }) {
 
 export function ClassroomDashboard({
   confirmedStudent,
+  groupRecommendations,
   groups,
   levelCounts,
   students,
@@ -236,6 +321,7 @@ export function ClassroomDashboard({
           {levels.map((level) => {
             const levelStudents = students.filter((student) => student.level === level);
             const isConfirmedLevel = confirmedStudent?.level === level;
+            const groupRecommendation = groupRecommendations[level];
 
             return (
               <section
@@ -268,6 +354,13 @@ export function ClassroomDashboard({
                     <li className="empty-level-card">No children at this level yet.</li>
                   )}
                 </ul>
+                {groupRecommendation ? (
+                  <GroupActionCard
+                    level={level}
+                    recommendation={groupRecommendation}
+                    studentIds={levelStudents.map((student) => student.id)}
+                  />
+                ) : null}
               </section>
             );
           })}

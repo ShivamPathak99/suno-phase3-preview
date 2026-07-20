@@ -233,12 +233,14 @@ export function planAdaptiveWorksheet({
 export function createAdaptiveWorksheetContent({
   card,
   focus,
+  mode = "individual",
   passageId,
   qualityChecks,
   studentId,
 }: {
   card: CuratedCard;
   focus: FocusedCardRecommendation;
+  mode?: AdaptiveCard["mode"];
   passageId: string;
   qualityChecks: AdaptiveCardQualityChecks;
   studentId: string;
@@ -253,7 +255,7 @@ export function createAdaptiveWorksheetContent({
         readings: 0,
       },
       focusSkillId: focus.skillId,
-      mode: "individual",
+      mode,
       passageId,
       qualityChecks,
       reason: focus.reason,

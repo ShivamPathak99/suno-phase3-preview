@@ -70,7 +70,7 @@ function clampNeed(value: number) {
   );
 }
 
-function needFor(profile: StudentSkillProfile) {
+export function needForSkill(profile: StudentSkillProfile) {
   return clampNeed(
     adaptiveConfig.selection.need.accuracyGapWeight * (1 - profile.accuracy.lcb90) +
       adaptiveConfig.selection.need.recentErrorWeight * profile.recentErrorEwma +
@@ -204,7 +204,7 @@ export function chooseFocus({
       ["active", "reinforce", "review_due"].includes(skillProfile.state),
     )
     .map(({ profile: skillProfile, skill }) => ({
-      need: needFor(skillProfile),
+      need: needForSkill(skillProfile),
       profile: skillProfile,
       skill,
     }))
