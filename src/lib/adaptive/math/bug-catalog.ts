@@ -25,6 +25,7 @@ export type MathBugItem = {
 export type MathBug = {
   displayName: string;
   id: BugId;
+  operation: MathBugItem["op"];
   pred: (item: MathBugItem) => number;
 };
 
@@ -69,6 +70,7 @@ export const bugCatalog: Record<BugId, MathBug> = {
   "add.dropped_carry": {
     displayName: "dropped the carry",
     id: "add.dropped_carry",
+    operation: "+",
     pred: (item) => {
       const columns = additionColumns(item);
       return columns.tensTotal * 10 + (columns.unitsTotal % 10);
@@ -77,6 +79,7 @@ export const bugCatalog: Record<BugId, MathBug> = {
   "add.carry_as_digit": {
     displayName: "wrote the carry as a digit",
     id: "add.carry_as_digit",
+    operation: "+",
     pred: (item) => {
       const columns = additionColumns(item);
       return Number(`${columns.tensTotal}${columns.unitsTotal}`);
@@ -85,6 +88,7 @@ export const bugCatalog: Record<BugId, MathBug> = {
   "add.carry_added_twice": {
     displayName: "added the carry twice",
     id: "add.carry_added_twice",
+    operation: "+",
     pred: (item) => {
       const columns = additionColumns(item);
       return (columns.tensTotal + 2 * columns.carry) * 10 + (columns.unitsTotal % 10);
@@ -93,6 +97,7 @@ export const bugCatalog: Record<BugId, MathBug> = {
   "add.no_place_value": {
     displayName: "added every digit as ones",
     id: "add.no_place_value",
+    operation: "+",
     pred: (item) => {
       requireOperation(item, "+");
       return tens(item.a) + units(item.a) + tens(item.b) + units(item.b);
@@ -101,6 +106,7 @@ export const bugCatalog: Record<BugId, MathBug> = {
   "sub.smaller_from_larger": {
     displayName: "subtracted the smaller digit from the larger digit",
     id: "sub.smaller_from_larger",
+    operation: "-",
     pred: (item) => {
       const columns = subtractionColumns(item);
       return (
@@ -112,6 +118,7 @@ export const bugCatalog: Record<BugId, MathBug> = {
   "sub.borrow_no_decrement": {
     displayName: "borrowed without reducing the tens",
     id: "sub.borrow_no_decrement",
+    operation: "-",
     pred: (item) => {
       const columns = subtractionColumns(item);
       const borrowedUnits =
@@ -124,6 +131,7 @@ export const bugCatalog: Record<BugId, MathBug> = {
   "sub.zero_gives_zero": {
     displayName: "made a zero difference whenever zero appeared",
     id: "sub.zero_gives_zero",
+    operation: "-",
     pred: (item) => {
       requireOperation(item, "-");
       if (item.a === 0 || item.b === 0) {
@@ -136,6 +144,7 @@ export const bugCatalog: Record<BugId, MathBug> = {
   "sub.zero_takes_n": {
     displayName: "made zero take the other digit",
     id: "sub.zero_takes_n",
+    operation: "-",
     pred: (item) => {
       const columns = subtractionColumns(item);
       const subtractColumn = (minuend: number, subtrahend: number) =>

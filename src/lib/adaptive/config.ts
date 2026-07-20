@@ -94,6 +94,29 @@ export const adaptiveConfig = {
     minimumAffectedStudents: 3,
     minimumCoverage: 0.35,
   },
+  math: {
+    /** Spec §B3 — all deterministic item-generation bounds. */
+    generator: {
+      maximumDigit: 9,
+      maximumTwoDigit: 99,
+      minimumTwoDigit: 10,
+      propertyChecksPerSkill: 1_000,
+      distinguishingSearchAttempts: 64,
+      factsMaximumResult: 20,
+    },
+    /** Spec §B3 — a baseline probe is eight items with two clear fingerprints. */
+    probe: {
+      itemCount: 8,
+      minimumMutuallyDistinguishingItems: 2,
+    },
+    /** Spec §B3 — the positive, slow-progressive 7-secure / 3-focus sheet. */
+    practice: {
+      focusItems: 3,
+      maximumConsecutiveFocusItems: 3,
+      secureItems: 7,
+      totalItems: 10,
+    },
+  },
   selection: {
     /** Spec §A2.6. */
     coldStart: {
