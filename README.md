@@ -18,7 +18,7 @@ The current build uses Supabase for seeded classroom data and direct signed audi
 2. Paste and run [`supabase/migrations/0001_initial_schema.sql`](./supabase/migrations/0001_initial_schema.sql).
 3. With `.env.local` configured, run `npm run seed`.
 
-The seed is idempotent and verifies that it created 20 demo students, 8 passages, and 20 confirmed assessments.
+The seed is idempotent and verifies that it created 20 demo students, 10 passages, and 24 confirmed assessments. Maya&apos;s two saved practice reads demonstrate the adaptive loop without changing her Word-level classroom placement.
 
 ## Phase 2 demo reset
 

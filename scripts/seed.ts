@@ -2,6 +2,15 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { createAdaptiveConfirmation, type AdaptiveAssessmentPayload } from "../src/lib/adaptive/confirmation";
+import {
+  getCuratedCard,
+  passageMetadataForCuratedCard,
+  type CuratedCard,
+} from "../src/lib/adaptive/card-catalog";
+import { createAdaptiveWorksheetContent } from "../src/lib/adaptive/worksheet";
+import { validateAdaptiveCard } from "../src/lib/adaptive/validation";
+
 type Level = "letter" | "word" | "paragraph" | "story";
 type Language = "en" | "hi";
 type WordStatus =
@@ -43,6 +52,16 @@ type Analysis = {
   words: AnalysisWord[];
   summary_for_teacher: string;
   recommended_focus: string;
+};
+
+type SeededPracticeReadback = {
+  analysis: Analysis;
+  adaptive: AdaptiveAssessmentPayload;
+  card: CuratedCard;
+  createdAt: string;
+  id: string;
+  passageId: string;
+  worksheetId: string;
 };
 
 const passages: Passage[] = [
@@ -115,7 +134,7 @@ const students: Student[] = [
   ["Kabir", "word"],
   ["Lata", "word"],
   ["Mohan", "word"],
-  ["Nisha", "word"],
+  ["Maya", "word"],
   ["Om", "paragraph"],
   ["Pooja", "paragraph"],
   ["Rohan", "paragraph"],
@@ -138,6 +157,37 @@ export const demoStudentIds = students.map((student) => student.id);
 export const demoAssessmentIds = students.map(
   (_, index) => `30000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
 );
+
+function requiredMayaStudent() {
+  const maya = students.find((student) => student.name === "Maya");
+
+  if (!maya) {
+    throw new Error("The Phase 2 demo needs Maya in the seeded classroom.");
+  }
+
+  return maya;
+}
+
+const mayaStudent = requiredMayaStudent();
+
+const mayaPracticePassageIds = [
+  "20000000-0000-4000-8000-000000000009",
+  "20000000-0000-4000-8000-000000000010",
+] as const;
+const mayaPracticeAssessmentIds = [
+  "30000000-0000-4000-8000-000000000021",
+  "30000000-0000-4000-8000-000000000022",
+] as const;
+const mayaBaselineAssessmentIds = [
+  "30000000-0000-4000-8000-000000000023",
+  "30000000-0000-4000-8000-000000000024",
+] as const;
+const mayaPracticeWorksheetIds = [
+  "40000000-0000-4000-8000-000000000001",
+  "40000000-0000-4000-8000-000000000002",
+] as const;
+
+demoAssessmentIds.push(...mayaPracticeAssessmentIds, ...mayaBaselineAssessmentIds);
 
 const levelProfiles: Record<
   Level,
@@ -224,6 +274,158 @@ function makeAnalysis(level: Level, passage: Passage, variation: number): Analys
   };
 }
 
+function practiceOutcomes(
+  card: CuratedCard,
+  outcomes: ReadonlyArray<"correct" | "hesitation" | "substituted">,
+) {
+  const targets = card.tokens.filter((token) => token.controlledExemplar);
+
+  return targets.map((token, index) => ({
+    confidence: "high" as const,
+    confirmation: "edited" as const,
+    outcome: outcomes[index] ?? "correct",
+    passageWordIndex: token.index,
+  }));
+}
+
+export function mayaPrerequisiteHistory(): AdaptiveAssessmentPayload[] {
+  const skills = ["en.cvc.short_a", "en.cvc.short_i"] as const;
+
+  return mayaBaselineAssessmentIds.map((assessmentId, assessmentIndex) => ({
+    candidateSignals: [],
+    evidence: skills.flatMap((skillId) =>
+      Array.from({ length: 6 }, (_, wordIndex) => ({
+        accuracyCredit: 1,
+        assessmentId,
+        automaticityCredit: 1,
+        directness: 1 as const,
+        distinctWordKey: `${skillId}.demo.${assessmentIndex}.${wordIndex}`,
+        occurredAt: `2026-07-${String(17 + assessmentIndex).padStart(2, "0")}T08:00:00.000Z`,
+        outcome: "correct" as const,
+        purpose: "benchmark" as const,
+        skillId,
+        studentId: mayaStudent.id,
+        teacherConfirmed: true,
+        v: "adaptive-evidence.v1" as const,
+        weight: 1,
+      })),
+    ),
+    evidenceSummaryBySkill: {},
+    focus: {
+      kind: "general_card" as const,
+      reason: "Maya has secure CVC foundations in this seeded baseline.",
+      source: "general" as const,
+    },
+    purpose: "benchmark" as const,
+    v: "adaptive-evidence.v1" as const,
+  }));
+}
+
+function practiceAnalysis(card: CuratedCard, outcomes: ReturnType<typeof practiceOutcomes>): Analysis {
+  const outcomeByIndex = new Map(outcomes.map((outcome) => [outcome.passageWordIndex, outcome.outcome]));
+  const words = wordsForPassage(card.body).map((passageWord, index) => {
+    const status = outcomeByIndex.get(index) ?? "correct";
+
+    return {
+      confidence: status === "correct" ? ("high" as const) : ("medium" as const),
+      heard_as: status === "substituted" ? `${passageWord.slice(0, -1)}p` : null,
+      passage_word: passageWord,
+      status,
+    };
+  });
+  const difficultWords = words.filter((word) => word.status !== "correct").length;
+  const accuracy = Math.round(((words.length - difficultWords) / words.length) * 100);
+
+  return {
+    accuracy_pct: accuracy,
+    level: "word",
+    recommended_focus: "Keep reading the new story together.",
+    summary_for_teacher: "This is a confirmed practice read. Keep the next card fresh and encouraging.",
+    wcpm: 30,
+    words,
+  };
+}
+
+/**
+ * Two pre-confirmed practice reads make the Phase 2 loop visible without a
+ * live recording: the first keeps sh words active; the second demonstrates a
+ * changed recommendation. Both are explicitly `focused_readback` data.
+ */
+export function createMayaDemoLoop(): SeededPracticeReadback[] {
+  const firstCard = getCuratedCard("en.digraph.sh.card1");
+  const secondCard = getCuratedCard("en.digraph.sh.card2");
+
+  if (!firstCard || !secondCard) {
+    throw new Error("The Phase 2 demo cards are missing from the curated catalog.");
+  }
+
+  const firstOutcomes = practiceOutcomes(firstCard, [
+    "substituted",
+    "substituted",
+    "substituted",
+    "correct",
+    "correct",
+  ]);
+  const historicalAdaptiveAssessments = mayaPrerequisiteHistory();
+  const firstAdaptive = createAdaptiveConfirmation({
+    assessment: {
+      assessmentId: mayaPracticeAssessmentIds[0],
+      occurredAt: "2026-07-19T09:00:00.000Z",
+      purpose: "focused_readback",
+      studentId: mayaStudent.id,
+      teacherConfirmed: true,
+    },
+    confirmedReadingCount: 4,
+    historicalAdaptiveAssessments,
+    passage: passageMetadataForCuratedCard(firstCard, mayaPracticePassageIds[0]),
+    scope: { level: "word", studentName: mayaStudent.name },
+    wordOutcomes: firstOutcomes,
+  });
+
+  const secondOutcomes = practiceOutcomes(secondCard, [
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+  ]);
+  const secondAdaptive = createAdaptiveConfirmation({
+    assessment: {
+      assessmentId: mayaPracticeAssessmentIds[1],
+      occurredAt: "2026-07-20T09:00:00.000Z",
+      purpose: "focused_readback",
+      studentId: mayaStudent.id,
+      teacherConfirmed: true,
+    },
+    confirmedReadingCount: 5,
+    historicalAdaptiveAssessments: [...historicalAdaptiveAssessments, firstAdaptive],
+    passage: passageMetadataForCuratedCard(secondCard, mayaPracticePassageIds[1]),
+    scope: { level: "word", studentName: mayaStudent.name },
+    wordOutcomes: secondOutcomes,
+  });
+
+  return [
+    {
+      adaptive: firstAdaptive,
+      analysis: practiceAnalysis(firstCard, firstOutcomes),
+      card: firstCard,
+      createdAt: "2026-07-19T09:00:00.000Z",
+      id: mayaPracticeAssessmentIds[0],
+      passageId: mayaPracticePassageIds[0],
+      worksheetId: mayaPracticeWorksheetIds[0],
+    },
+    {
+      adaptive: secondAdaptive,
+      analysis: practiceAnalysis(secondCard, secondOutcomes),
+      card: secondCard,
+      createdAt: "2026-07-20T09:00:00.000Z",
+      id: mayaPracticeAssessmentIds[1],
+      passageId: mayaPracticePassageIds[1],
+      worksheetId: mayaPracticeWorksheetIds[1],
+    },
+  ];
+}
+
 function describeError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
@@ -287,10 +489,19 @@ async function upsert(
 }
 
 export async function seedDemoData(supabase: SupabaseClient) {
+  const mayaLoop = createMayaDemoLoop();
+  const practicePassages: Passage[] = mayaLoop.map((readback) => ({
+    body: readback.card.body,
+    id: readback.passageId,
+    language: readback.card.language,
+    level: readback.card.level,
+    title: readback.card.title,
+  }));
+
   await upsert(
     supabase,
     "passages",
-    passages.map(({ id, level, language, title, body }) => ({
+    [...passages, ...practicePassages].map(({ id, level, language, title, body }) => ({
         id,
         level,
         language,
@@ -318,39 +529,119 @@ export async function seedDemoData(supabase: SupabaseClient) {
       .map((passage) => [passage.level, passage]),
   );
 
+  const baselineAssessments = students.map((student, index) => {
+    const passage = englishPassageByLevel.get(student.level);
+
+    if (!passage) {
+      throw new Error(`Missing English passage for ${student.level}.`);
+    }
+
+    const analysis = makeAnalysis(student.level, passage, index);
+    const transcriptWords = analysis.words.map((word, wordIndex) => ({
+      word: word.passage_word,
+      start: Number((wordIndex * 0.7).toFixed(2)),
+      end: Number((wordIndex * 0.7 + 0.45).toFixed(2)),
+    }));
+
+    return {
+      id: demoAssessmentIds[index],
+      student_id: student.id,
+      passage_id: passage.id,
+      audio_url: null,
+      transcript_json: {
+        text: passage.body,
+        words: transcriptWords,
+      },
+      analysis_json: analysis,
+      level: analysis.level,
+      wcpm: analysis.wcpm,
+      accuracy: analysis.accuracy_pct,
+      teacher_confirmed: true,
+      created_at: new Date(Date.UTC(2026, 6, 18, 8, index, 0)).toISOString(),
+    };
+  });
+  const wordPassage = englishPassageByLevel.get("word");
+
+  if (!wordPassage) {
+    throw new Error("Missing English word passage for Maya's seeded baseline history.");
+  }
+
+  const mayaBaselineHistory = mayaPrerequisiteHistory();
+  const mayaBaselineAssessments = mayaBaselineHistory.map((adaptive, index) => {
+    const analysis = makeAnalysis("word", wordPassage, index);
+
+    return {
+      accuracy: analysis.accuracy_pct,
+      analysis_json: { ...analysis, _adaptive: adaptive },
+      audio_url: null,
+      created_at: `2026-07-${String(17 + index).padStart(2, "0")}T08:00:00.000Z`,
+      id: mayaBaselineAssessmentIds[index],
+      level: analysis.level,
+      passage_id: wordPassage.id,
+      student_id: mayaStudent.id,
+      teacher_confirmed: true,
+      transcript_json: { text: wordPassage.body, words: [] },
+      wcpm: analysis.wcpm,
+    };
+  });
+
   await upsert(
     supabase,
     "assessments",
-    students.map((student, index) => {
-        const passage = englishPassageByLevel.get(student.level);
+    [
+      ...baselineAssessments,
+      ...mayaBaselineAssessments,
+      ...mayaLoop.map((readback) => ({
+        accuracy: readback.analysis.accuracy_pct,
+        analysis_json: { ...readback.analysis, _adaptive: readback.adaptive },
+        audio_url: null,
+        created_at: readback.createdAt,
+        id: readback.id,
+        level: readback.analysis.level,
+        passage_id: readback.passageId,
+        student_id: mayaStudent.id,
+        teacher_confirmed: true,
+        transcript_json: {
+          text: readback.card.body,
+          words: readback.analysis.words.map((word, wordIndex) => ({
+            end: Number((wordIndex * 0.7 + 0.45).toFixed(2)),
+            start: Number((wordIndex * 0.7).toFixed(2)),
+            word: word.passage_word,
+          })),
+        },
+        wcpm: readback.analysis.wcpm,
+      })),
+    ],
+  );
 
-        if (!passage) {
-          throw new Error(`Missing English passage for ${student.level}.`);
-        }
+  const firstFocus = mayaLoop[0]?.adaptive.focus;
+  if (!firstFocus || firstFocus.kind !== "focused_card") {
+    throw new Error("Maya's first practice read must start with a focused card.");
+  }
 
-        const analysis = makeAnalysis(student.level, passage, index);
-        const transcriptWords = analysis.words.map((word, wordIndex) => ({
-          word: word.passage_word,
-          start: Number((wordIndex * 0.7).toFixed(2)),
-          end: Number((wordIndex * 0.7 + 0.45).toFixed(2)),
-        }));
+  await upsert(
+    supabase,
+    "worksheets",
+    mayaLoop.map((readback) => {
+      const qualityChecks = validateAdaptiveCard(readback.card, {
+        focusSkillId: firstFocus.skillId,
+        language: "en",
+        level: "word",
+      }).qualityChecks;
+      const contentJson = createAdaptiveWorksheetContent({
+        card: readback.card,
+        focus: firstFocus,
+        passageId: readback.passageId,
+        qualityChecks,
+        studentId: mayaStudent.id,
+      });
 
-        return {
-          id: demoAssessmentIds[index],
-          student_id: student.id,
-          passage_id: passage.id,
-          audio_url: null,
-          transcript_json: {
-            text: passage.body,
-            words: transcriptWords,
-          },
-          analysis_json: analysis,
-          level: analysis.level,
-          wcpm: analysis.wcpm,
-          accuracy: analysis.accuracy_pct,
-          teacher_confirmed: true,
-          created_at: new Date(Date.UTC(2026, 6, 18, 8, index, 0)).toISOString(),
-        };
+      return {
+        content_json: contentJson,
+        id: readback.worksheetId,
+        language: "en",
+        level: "word",
+      };
     }),
   );
 
@@ -365,7 +656,7 @@ export async function seedDemoData(supabase: SupabaseClient) {
         .select("*", { count: "exact", head: true })
         .in(
           "id",
-          passages.map((passage) => passage.id),
+          [...passages, ...practicePassages].map((passage) => passage.id),
         ),
       supabase
         .from("assessments")
@@ -380,7 +671,7 @@ export async function seedDemoData(supabase: SupabaseClient) {
     throw studentCountError ?? passageCountError ?? assessmentCountError;
   }
 
-  if (studentCount !== 20 || passageCount !== 8 || assessmentCount !== 20) {
+  if (studentCount !== 20 || passageCount !== 10 || assessmentCount !== 24) {
     throw new Error(
       `Unexpected demo seed counts: students=${studentCount}, passages=${passageCount}, assessments=${assessmentCount}.`,
     );

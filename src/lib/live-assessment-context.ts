@@ -1,6 +1,7 @@
 import { analysisSchema, type ReadingAnalysis } from "@/lib/analysisSchema";
 import type { ReadingPurpose } from "@/lib/adaptive/types";
 import type { AssessmentContext, AssessmentPassage, ReadingLevel } from "@/lib/assessment-types";
+import { isPlacementAssessment } from "@/lib/live-classroom";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type StudentRecord = {
@@ -150,18 +151,20 @@ async function draftAttemptNumber(studentId: string) {
 
 async function selectedPassageIdForStudent(studentId: string) {
   const supabase = createSupabaseAdminClient();
-  const { data: latestAssessment, error: latestAssessmentError } = await supabase
+  const { data: confirmedAssessments, error: latestAssessmentError } = await supabase
     .from("assessments")
-    .select("passage_id, level")
+    .select("passage_id, level, analysis_json")
     .eq("student_id", studentId)
     .eq("teacher_confirmed", true)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<{ level: string; passage_id: string }>();
+    .order("created_at", { ascending: false });
 
   if (latestAssessmentError) {
     throw new Error("Couldn't load the student's last reading level.");
   }
+
+  const latestAssessment = (confirmedAssessments ?? []).find((assessment) =>
+    isPlacementAssessment(assessment.analysis_json),
+  );
 
   if (latestAssessment?.passage_id) {
     // Follow the latest teacher-confirmed ladder position, not merely the
