@@ -1964,6 +1964,142 @@ input:focus-visible {
   text-align: center;
 }
 
+.math-review-page {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.math-review-shell,
+.math-review-result {
+  margin: 0 auto;
+  max-width: 780px;
+}
+
+.math-review-heading,
+.math-review-result {
+  background: var(--card);
+  border: 1px solid var(--ruling);
+  border-radius: 18px;
+  padding: clamp(22px, 5vw, 38px);
+}
+
+.math-review-heading h1,
+.math-review-result h1 {
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: clamp(28px, 6vw, 40px);
+  line-height: 1.1;
+  margin: 8px 0 12px;
+}
+
+.math-review-heading > p:last-child,
+.math-review-result p {
+  color: var(--slate);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.math-review-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 18px 0;
+  padding: 0;
+}
+
+.math-review-item {
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--ruling);
+  border-left: 5px solid var(--slate);
+  border-radius: 12px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(160px, 0.75fr) minmax(0, 1.25fr);
+  padding: 16px;
+}
+
+.math-review-item.is-correct {
+  border-left-color: var(--level-story);
+}
+
+.math-review-item.is-wrong {
+  border-left-color: var(--pen);
+}
+
+.math-review-problem {
+  display: grid;
+  gap: 4px;
+}
+
+.math-review-problem > span,
+.math-review-problem small {
+  color: var(--slate);
+  font-size: 12px;
+}
+
+.math-review-problem strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.math-review-controls p {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0 0 10px;
+}
+
+.math-review-controls p span {
+  color: var(--slate);
+  display: block;
+  margin-top: 4px;
+}
+
+.math-review-controls label {
+  color: var(--slate);
+  display: grid;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.math-review-controls select {
+  background: #fff;
+  border: 1px solid #bfd3ca;
+  border-radius: 7px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 40px;
+  padding: 7px;
+}
+
+.math-review-correct {
+  color: var(--level-story);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.math-confirm-action {
+  border: 0;
+  cursor: pointer;
+  min-height: 52px;
+}
+
+.math-review-result {
+  margin-top: 12vh;
+  text-align: center;
+}
+
+.math-review-result .primary-action {
+  margin-top: 22px;
+}
+
+@media (max-width: 600px) {
+  .math-review-item {
+    grid-template-columns: 1fr;
+  }
+}
+
 .unassessed-student-card {
   grid-template-columns: minmax(0, 1fr) auto;
 }

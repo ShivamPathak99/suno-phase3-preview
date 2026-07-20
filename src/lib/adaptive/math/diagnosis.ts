@@ -114,10 +114,40 @@ function matchingBugs(response: MathResponse) {
     return [response.reviewTag];
   }
 
-  return (Object.entries(response.item.bugPredictions) as Array<[BugId, number]>)
-    .filter(([bugId, prediction]) => bugCatalog[bugId].operation === response.item.op && prediction === response.answer)
+  return matchingMathBugIds(response.item, response.answer);
+}
+
+/** Returns the automatic catalog matches for one child answer, before review tags. */
+export function matchingMathBugIds(item: MathItem, answer: number): BugId[] {
+  if (answer === item.answer) {
+    return [];
+  }
+
+  return (Object.entries(item.bugPredictions) as Array<[BugId, number]>)
+    .filter(([bugId, prediction]) => bugCatalog[bugId].operation === item.op && prediction === answer)
     .map(([bugId]) => bugId)
     .sort();
+}
+
+export function mathBugWorkedFingerprint(bugId: BugId) {
+  switch (bugId) {
+    case "add.dropped_carry":
+      return "47 + 25 → 62";
+    case "add.carry_as_digit":
+      return "47 + 25 → 612";
+    case "add.carry_added_twice":
+      return "47 + 25 → 82";
+    case "add.no_place_value":
+      return "47 + 25 → 18";
+    case "sub.smaller_from_larger":
+      return "52 − 38 → 26";
+    case "sub.borrow_no_decrement":
+      return "52 − 38 → 24";
+    case "sub.zero_gives_zero":
+      return "30 − 0 → 0";
+    case "sub.zero_takes_n":
+      return "40 − 7 → 47";
+  }
 }
 
 function reliabilityFor(response: MathResponse) {

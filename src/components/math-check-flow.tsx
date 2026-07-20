@@ -164,7 +164,11 @@ export function MathCheckFlow({ studentId }: { studentId: string }) {
             <p className="math-check-kicker">Well done</p>
             <h1>All finished.</h1>
             <p>The check is ready for the teacher to review. You did not show a score to the child.</p>
-            <Link className="primary-action" href="/">Back to class</Link>
+            {check ? (
+              <Link className="primary-action" href={`/math/${studentId}/review/${check.assessmentId}`}>
+                Review with teacher
+              </Link>
+            ) : null}
           </section>
         ) : null}
       </section>
