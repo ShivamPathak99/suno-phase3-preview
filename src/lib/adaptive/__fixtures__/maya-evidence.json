@@ -35,7 +35,8 @@
           "normalizedText": "fish",
           "primarySkillId": "en.digraph.sh",
           "controlledExemplar": true,
-          "outcome": "correct",
+          "outcome": "substituted",
+          "heardAs": "fip",
           "confidence": "high",
           "teacherAction": "edited"
         },
@@ -99,8 +100,7 @@
           "normalizedText": "shut",
           "primarySkillId": "en.digraph.sh",
           "controlledExemplar": true,
-          "outcome": "substituted",
-          "heardAs": "sut",
+          "outcome": "correct",
           "confidence": "high",
           "teacherAction": "edited"
         }
@@ -115,12 +115,12 @@
       "readings": 2
     },
     "profileSnapshot": {
-      "accuracyCreditTotal": 4.2,
-      "automaticityCreditTotal": 3.4,
+      "accuracyCreditTotal": 3.3,
+      "automaticityCreditTotal": 2.4,
       "effectiveEvidence": 6,
       "distinctWords": 6,
       "separateDays": 2,
-      "recentErrorEwma": 0.459,
+      "recentErrorEwma": 0.55161,
       "state": "reinforce"
     },
     "focus": {

@@ -77,4 +77,28 @@ export const adaptiveConfig = {
     reviewIntervalDays: 21,
     millisecondsPerDay: 86_400_000,
   },
+  selection: {
+    /** Spec §A2.6. */
+    coldStart: {
+      minimumConfirmedReadings: 2,
+      minimumSkillEvidence: 2,
+    },
+    /** Spec §A2.6. */
+    frontier: {
+      maximumActiveSkills: 3,
+    },
+    /** Spec §A2.6. */
+    need: {
+      accuracyGapWeight: 0.6,
+      focusThreshold: 0.45,
+      maximum: 1,
+      minimum: 0,
+      recentErrorWeight: 0.25,
+      reviewDueBonus: 0.15,
+    },
+    /** Spec §A2.6. */
+    strategy: {
+      maximumFlatFocuses: 3,
+    },
+  },
 } as const;

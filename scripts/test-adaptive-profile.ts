@@ -5,9 +5,16 @@ import { resolve } from "node:path";
 import { extractSkillEvidence, type SkillEvidenceEvent } from "../src/lib/adaptive/evidence";
 import { buildStudentProfile } from "../src/lib/adaptive/profile";
 import type { PassageMeta } from "../src/lib/adaptive/passage-catalog";
+import { chooseFocus } from "../src/lib/adaptive/selection";
 
 type MayaFixture = {
   expected: {
+    evidenceSummary: {
+      errors: number;
+      hesitations: number;
+      opportunities: number;
+      readings: number;
+    };
     profileSnapshot: {
       accuracyCreditTotal: number;
       automaticityCreditTotal: number;
@@ -104,17 +111,24 @@ assert.ok(
   Math.abs(sh.recentErrorEwma - maya.expected.profileSnapshot.recentErrorEwma) < 0.000000001,
 );
 assert.equal(sh.state, maya.expected.profileSnapshot.state);
-assert.equal(sh.accuracy.beta, 2.8);
-assert.equal(sh.accuracy.mean, 0.65);
-assert.ok(Math.abs(sh.accuracy.lcb90 - 0.4464929704) < 0.000000001);
-assert.equal(sh.automaticity.beta, 3.6);
-assert.equal(sh.automaticity.mean, 0.55);
-assert.ok(Math.abs(sh.automaticity.lcb90 - 0.3377360134) < 0.000000001);
+assert.equal(sh.accuracy.beta, 3.7);
+assert.ok(Math.abs(sh.accuracy.mean - 0.5375) < 0.000000001);
+assert.ok(Math.abs(sh.accuracy.lcb90 - 0.3247675123) < 0.0000001);
+assert.equal(sh.automaticity.beta, 4.6);
+assert.ok(Math.abs(sh.automaticity.mean - 0.425) < 0.000000001);
+assert.ok(Math.abs(sh.automaticity.lcb90 - 0.21408032) < 0.0000001);
 assert.equal(
   mayaProfile.skills["en.digraph.ch"].state,
   "locked",
   "An unseen dependent skill stays locked until its prerequisites are secure.",
 );
+const mayaFocus = chooseFocus({
+  evidenceSummaryBySkill: { "en.digraph.sh": maya.expected.evidenceSummary },
+  profile: mayaProfile,
+  scope: { level: "word", studentName: "Maya" },
+});
+assert.equal(mayaFocus.kind, "focused_card");
+assert.equal(mayaFocus.skillId, "en.digraph.sh");
 
 function directCorrectEvent(
   assessmentId: string,
