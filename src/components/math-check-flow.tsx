@@ -27,7 +27,13 @@ function problemLabel(item: MathItem) {
   return `${item.a} ${item.op} ${item.b}`;
 }
 
-export function MathCheckFlow({ studentId }: { studentId: string }) {
+export function MathCheckFlow({
+  sourceAssessmentId,
+  studentId,
+}: {
+  sourceAssessmentId?: string;
+  studentId: string;
+}) {
   const [state, setState] = useState<MathCheckState>("ready");
   const [check, setCheck] = useState<StartedCheck | null>(null);
   const [index, setIndex] = useState(0);
@@ -43,7 +49,7 @@ export function MathCheckFlow({ studentId }: { studentId: string }) {
     setNotice(null);
     try {
       const response = await fetch("/api/math/checks", {
-        body: JSON.stringify({ studentId }),
+        body: JSON.stringify({ sourceAssessmentId, studentId }),
         headers: { "content-type": "application/json" },
         method: "POST",
       });
@@ -120,10 +126,10 @@ export function MathCheckFlow({ studentId }: { studentId: string }) {
         {state === "ready" || state === "starting" || state === "error" ? (
           <section className="math-teacher-card">
             <p className="math-check-kicker">Numeracy</p>
-            <h1>Run a 5-minute math check</h1>
+            <h1>{sourceAssessmentId ? "Run a short math re-check" : "Run a 5-minute math check"}</h1>
             <p>Give the screen to the child. They will see one problem at a time and use the large number pad.</p>
             <button className="primary-action" disabled={state === "starting"} onClick={() => void startCheck()} type="button">
-              {state === "starting" ? "Preparing…" : "Start math check"}
+              {state === "starting" ? "Preparing…" : sourceAssessmentId ? "Start re-check" : "Start math check"}
             </button>
             {notice ? <p className="math-check-notice" role="alert">{notice}</p> : null}
             <Link className="back-link" href="/">Back to class</Link>
@@ -163,7 +169,7 @@ export function MathCheckFlow({ studentId }: { studentId: string }) {
           <section className="math-complete-card" role="status">
             <p className="math-check-kicker">Well done</p>
             <h1>All finished.</h1>
-            <p>The check is ready for the teacher to review. You did not show a score to the child.</p>
+            <p>{sourceAssessmentId ? "Great work — every problem is complete." : "The check is ready for the teacher to review. You did not show a score to the child."}</p>
             {check ? (
               <Link className="primary-action" href={`/math/${studentId}/review/${check.assessmentId}`}>
                 Review with teacher

@@ -4,8 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   createMathCheckDraft,
+  isMathCheckDraft,
   mathInstrumentPassageId,
 } from "@/lib/adaptive/math/check-contract";
+import { createMathPracticePlan, storedMathFocus } from "@/lib/adaptive/math/focus";
 import { generateProbeItems } from "@/lib/adaptive/math/item-generator";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -13,6 +15,7 @@ export const runtime = "nodejs";
 
 type StudentRecord = { id: string; name: string };
 type InstrumentRecord = { id: string };
+type MathSourceRecord = { analysis_json: unknown; teacher_confirmed: boolean };
 
 function isUuid(value: unknown): value is string {
   return (
@@ -50,6 +53,13 @@ export function createMathCheckStartHandler({
     if (!isUuid(studentId)) {
       return jsonError("studentId must be a UUID.", 400);
     }
+    const sourceAssessmentId =
+      typeof body === "object" && body !== null && !Array.isArray(body)
+        ? (body as { sourceAssessmentId?: unknown }).sourceAssessmentId
+        : undefined;
+    if (sourceAssessmentId !== undefined && !isUuid(sourceAssessmentId)) {
+      return jsonError("sourceAssessmentId must be a UUID when supplied.", 400);
+    }
 
     try {
       const supabase = createAdminClient();
@@ -76,8 +86,35 @@ export function createMathCheckStartHandler({
       }
 
       const seed = createSeed();
-      const items = generateItems(seed);
-      const analysis = createMathCheckDraft({ items, seed });
+      let purpose: "diagnostic" | "practice_check" = "diagnostic";
+      let items = generateItems(seed);
+
+      if (sourceAssessmentId) {
+        const { data: source, error: sourceError } = await supabase
+          .from("assessments")
+          .select("analysis_json, teacher_confirmed")
+          .eq("id", sourceAssessmentId)
+          .eq("student_id", studentId)
+          .maybeSingle<MathSourceRecord>();
+        if (sourceError) {
+          console.error("Math re-check source lookup failed.", sourceError);
+          return jsonError("Couldn't prepare the math re-check. Please try again.", 502);
+        }
+        if (!source?.teacher_confirmed || !isMathCheckDraft(source.analysis_json)) {
+          return jsonError("The source math check is not ready for a re-check.", 409);
+        }
+        const focus = storedMathFocus(source.analysis_json);
+        if (!focus) {
+          return jsonError("There is no confirmed math focus to re-check yet.", 409);
+        }
+        purpose = "practice_check";
+        items = createMathPracticePlan({
+          focusSkillId: focus.focusSkillId,
+          sourceAssessmentId,
+        }).recheckItems;
+      }
+
+      const analysis = createMathCheckDraft({ items, purpose, seed });
       const { data: draft, error: insertError } = await supabase
         .from("assessments")
         .insert({
@@ -100,7 +137,7 @@ export function createMathCheckStartHandler({
       }
 
       return NextResponse.json(
-        { assessmentId: draft.id, items, studentName: studentResult.data.name },
+        { assessmentId: draft.id, items, purpose, studentName: studentResult.data.name },
         { status: 201 },
       );
     } catch (error) {

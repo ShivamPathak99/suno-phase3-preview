@@ -86,7 +86,11 @@ export function MathCheckReview({
             {diagnosis.recommendation?.reason ??
               `${studentName}'s answers are saved. Keep practising broadly and check again later.`}
           </p>
-          <Link className="primary-action" href="/">Back to class</Link>
+          {diagnosis.recommendation ? (
+            <Link className="primary-action" href={`/math/${studentId}/practice/${assessmentId}`}>
+              Create practice sheet
+            </Link>
+          ) : <Link className="primary-action" href="/">Back to class</Link>}
         </section>
       </main>
     );

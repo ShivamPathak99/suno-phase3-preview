@@ -2094,9 +2094,126 @@ input:focus-visible {
   margin-top: 22px;
 }
 
+.math-practice-page {
+  margin: 0 auto;
+  max-width: 860px;
+  padding: 24px;
+}
+
+.math-practice-sheet,
+.math-answer-key {
+  background: #fff;
+  border: 1px solid var(--ruling);
+  border-radius: 16px;
+  padding: clamp(24px, 5vw, 42px);
+}
+
+.math-practice-heading {
+  align-items: flex-start;
+  border-bottom: 2px solid #d8e7df;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding-bottom: 20px;
+}
+
+.math-practice-heading h1,
+.math-answer-key h2 {
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: clamp(28px, 6vw, 40px);
+  line-height: 1.1;
+  margin: 8px 0;
+}
+
+.math-practice-heading p:not(.math-check-kicker) {
+  color: var(--slate);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 500px;
+}
+
+.math-practice-screen-chrome {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.math-practice-screen-chrome .secondary-action,
+.math-practice-screen-chrome .primary-action {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.math-practice-problems {
+  column-count: 2;
+  column-gap: 54px;
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: 28px;
+  line-height: 2.15;
+  margin: 30px 0 12px;
+}
+
+.math-practice-problems li {
+  break-inside: avoid;
+  padding-left: 4px;
+}
+
+.math-practice-celebration {
+  background: #eef7f1;
+  border-radius: 10px;
+  color: #2d654c;
+  font-weight: 700;
+  margin: 24px 0 0;
+  padding: 13px 16px;
+}
+
+.math-answer-key {
+  margin-top: 24px;
+}
+
+.math-answer-key ol {
+  column-count: 2;
+  font-size: 18px;
+  line-height: 1.9;
+  padding-left: 24px;
+}
+
 @media (max-width: 600px) {
   .math-review-item {
     grid-template-columns: 1fr;
+  }
+
+  .math-practice-heading {
+    flex-direction: column;
+  }
+
+  .math-practice-problems,
+  .math-answer-key ol {
+    column-count: 1;
+  }
+}
+
+@media print {
+  .math-practice-page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .math-practice-sheet,
+  .math-answer-key {
+    border: 0;
+    border-radius: 0;
+    padding: 14mm 16mm;
+  }
+
+  .math-practice-screen-chrome {
+    display: none !important;
+  }
+
+  .math-answer-key {
+    break-before: page;
   }
 }
 

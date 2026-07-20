@@ -325,3 +325,34 @@ export function generatePracticeSet({
 
   return items;
 }
+
+/** Generates the six-item post-practice check with four items in the focus space. */
+export function generateRecheckItems({
+  focusSkillId,
+  secureSkillIds,
+  seed,
+}: PracticeSetInput): MathItem[] {
+  const secure = secureSkillIds.filter((skillId) => skillId !== focusSkillId);
+  if (secure.length === 0) {
+    throw new Error("A math re-check needs at least one secure skill distinct from its focus.");
+  }
+
+  const slots: Array<"focus" | "secure"> = ["secure", "focus", "focus", "secure", "focus", "focus"];
+  const items = slots.map((slot, index) =>
+    generateMathItem(
+      slot === "focus" ? focusSkillId : secure[index % secure.length] ?? secure[0]!,
+      `${seed}:recheck`,
+      index,
+    ),
+  );
+  const focusCount = items.filter((item) => item.skillId === focusSkillId).length;
+  if (
+    items.length !== adaptiveConfig.math.recheck.totalItems ||
+    focusCount < adaptiveConfig.math.recheck.minimumFocusItems ||
+    items.length - focusCount !== adaptiveConfig.math.recheck.secureItems
+  ) {
+    throw new Error("Math re-check composition is invalid.");
+  }
+
+  return items;
+}

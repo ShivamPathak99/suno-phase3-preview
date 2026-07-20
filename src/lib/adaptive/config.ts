@@ -123,6 +123,12 @@ export const adaptiveConfig = {
       secureItems: 7,
       totalItems: 10,
     },
+    /** Spec §B4 — post-practice checks are short and mostly on the focus. */
+    recheck: {
+      minimumFocusItems: 4,
+      secureItems: 2,
+      totalItems: 6,
+    },
   },
   selection: {
     /** Spec §A2.6. */
