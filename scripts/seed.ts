@@ -10,6 +10,7 @@ import {
 } from "../src/lib/adaptive/card-catalog";
 import { createAdaptiveWorksheetContent } from "../src/lib/adaptive/worksheet";
 import { validateAdaptiveCard } from "../src/lib/adaptive/validation";
+import { mathInstrumentPassageId } from "../src/lib/adaptive/math/check-contract";
 
 type Level = "letter" | "word" | "paragraph" | "story";
 type Language = "en" | "hi";
@@ -122,6 +123,15 @@ const passages: Passage[] = [
     body: "मीना टिफिन लेकर स्कूल गई। अवकाश में उसका टिफिन नहीं मिला। उसने मेज के नीचे देखा। एक दोस्त ने टिफिन जूतों के पास पाया। मीना ने धन्यवाद कहा और केले के दो टुकड़े बाँटे। फिर दोनों घंटी से पहले कक्षा में लौट गईं।",
   },
 ];
+
+/** Database-table-preserving sentinel for `math-check.v1` assessment rows. */
+const mathInstrumentPassage: Passage = {
+  body: "Math instrument — not a reading passage.",
+  id: mathInstrumentPassageId,
+  language: "en",
+  level: "word",
+  title: "Math instrument",
+};
 
 const students: Student[] = [
   ["Aarti", "letter"],
@@ -497,11 +507,12 @@ export async function seedDemoData(supabase: SupabaseClient) {
     level: readback.card.level,
     title: readback.card.title,
   }));
+  const seededPassages = [...passages, ...practicePassages, mathInstrumentPassage];
 
   await upsert(
     supabase,
     "passages",
-    [...passages, ...practicePassages].map(({ id, level, language, title, body }) => ({
+    seededPassages.map(({ id, level, language, title, body }) => ({
         id,
         level,
         language,
@@ -656,7 +667,7 @@ export async function seedDemoData(supabase: SupabaseClient) {
         .select("*", { count: "exact", head: true })
         .in(
           "id",
-          [...passages, ...practicePassages].map((passage) => passage.id),
+          seededPassages.map((passage) => passage.id),
         ),
       supabase
         .from("assessments")
@@ -671,7 +682,7 @@ export async function seedDemoData(supabase: SupabaseClient) {
     throw studentCountError ?? passageCountError ?? assessmentCountError;
   }
 
-  if (studentCount !== 20 || passageCount !== 10 || assessmentCount !== 24) {
+  if (studentCount !== 20 || passageCount !== 11 || assessmentCount !== 24) {
     throw new Error(
       `Unexpected demo seed counts: students=${studentCount}, passages=${passageCount}, assessments=${assessmentCount}.`,
     );

@@ -61,7 +61,7 @@ function createFixtureClient({ protectedDemoId = false } = {}) {
               }
 
               if (table === "passages") {
-                return Promise.resolve({ count: 10, data: null, error: null });
+                return Promise.resolve({ count: 11, data: null, error: null });
               }
 
               if (table === "assessments" && columns === "*") {

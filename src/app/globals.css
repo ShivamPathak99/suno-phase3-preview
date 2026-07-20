@@ -1717,7 +1717,7 @@ input:focus-visible {
   border-radius: 10px;
   display: grid;
   gap: 4px;
-  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1fr) 48px 48px;
   min-height: 88px;
   padding: 8px;
 }
@@ -1811,6 +1811,157 @@ input:focus-visible {
   height: 21px;
   position: relative;
   width: 21px;
+}
+
+.student-numeracy-link {
+  align-items: center;
+  background: var(--level-paragraph);
+  border-radius: 9px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  height: 44px;
+  justify-content: center;
+  text-decoration: none;
+  width: 44px;
+}
+
+.math-check-page {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.math-check-shell {
+  max-width: 540px;
+  width: 100%;
+}
+
+.math-teacher-card,
+.math-child-screen,
+.math-complete-card {
+  background: var(--card);
+  border: 1px solid var(--ruling);
+  border-radius: 22px;
+  box-shadow: 0 14px 34px rgb(27 48 57 / 9%);
+  padding: clamp(24px, 6vw, 42px);
+  text-align: center;
+}
+
+.math-teacher-card h1,
+.math-child-screen h1,
+.math-complete-card h1 {
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: clamp(30px, 7vw, 42px);
+  line-height: 1.08;
+  margin: 8px 0 14px;
+}
+
+.math-teacher-card p,
+.math-complete-card p {
+  color: var(--slate);
+  line-height: 1.55;
+  margin: 0 auto 22px;
+  max-width: 430px;
+}
+
+.math-check-kicker,
+.math-check-progress {
+  color: var(--board);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.math-teacher-card .primary-action,
+.math-complete-card .primary-action,
+.math-next-action {
+  border: 0;
+  cursor: pointer;
+  min-height: 52px;
+}
+
+.math-teacher-card .back-link {
+  display: flex;
+  justify-content: center;
+  margin: 16px auto 0;
+}
+
+.math-child-screen {
+  padding-bottom: 30px;
+}
+
+.math-vertical-problem {
+  display: grid;
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: clamp(58px, 17vw, 88px);
+  font-variant-numeric: tabular-nums;
+  gap: 1px;
+  line-height: 1;
+  margin: 28px auto;
+  text-align: right;
+  width: min(100%, 250px);
+}
+
+.math-vertical-problem i {
+  border-top: 4px solid var(--ink);
+  display: block;
+  margin-top: 9px;
+}
+
+.math-vertical-problem strong {
+  color: var(--board);
+  font: inherit;
+  min-height: 1em;
+  padding-top: 8px;
+}
+
+.math-number-pad {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0 auto 22px;
+  max-width: 320px;
+}
+
+.math-number-key {
+  background: #eef6f2;
+  border: 1px solid #c6ddd3;
+  border-radius: 12px;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  min-height: 48px;
+}
+
+.math-number-key:active {
+  background: #d8ebdf;
+  transform: translateY(1px);
+}
+
+.math-number-key-muted {
+  color: var(--slate);
+  font-size: 15px;
+}
+
+.math-check-notice {
+  color: #9e382e;
+  font-size: 14px;
+  font-weight: 650;
+  margin: 14px 0 0;
+}
+
+.math-saving {
+  color: var(--slate);
+  font-weight: 700;
+  text-align: center;
 }
 
 .unassessed-student-card {

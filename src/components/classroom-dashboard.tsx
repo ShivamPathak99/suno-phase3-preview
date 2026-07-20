@@ -210,6 +210,9 @@ function StudentCard({ student }: { student: DashboardStudent }) {
       >
         <AssessIcon />
       </Link>
+      <Link aria-label={"Run a math check for " + student.name} className="student-numeracy-link" href={"/math/" + student.id}>
+        Math
+      </Link>
     </article>
   );
 }
