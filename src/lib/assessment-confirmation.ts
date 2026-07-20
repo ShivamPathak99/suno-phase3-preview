@@ -1,4 +1,5 @@
 import type { ReadingAnalysis } from "@/lib/analysisSchema";
+import type { ConfirmedAssessmentWord } from "@/lib/adaptive/evidence";
 import type { AssessmentWordOverride } from "@/lib/assessment-contract";
 import type { ReadingLevel } from "@/lib/assessment-types";
 
@@ -17,6 +18,28 @@ export type ConfirmedReadingAnalysis = {
   analysis: ReadingAnalysis;
   wcpm: number;
 };
+
+/**
+ * Creates the evidence-facing words from the result the teacher actually
+ * confirmed. This intentionally runs after recomputation: draft AI markings
+ * are never treated as evidence on their own.
+ */
+export function confirmedAnalysisToEvidenceWords(
+  analysis: ReadingAnalysis,
+  overrides: readonly AssessmentWordOverride[],
+): ConfirmedAssessmentWord[] {
+  const overriddenIndexes = new Set(
+    overrides.map((override) => override.passage_word_index),
+  );
+
+  return analysis.words.map((word, passageWordIndex) => ({
+    confidence: word.confidence,
+    confirmation: overriddenIndexes.has(passageWordIndex) ? "edited" : "accepted",
+    heardAs: word.heard_as ?? undefined,
+    outcome: word.status,
+    passageWordIndex,
+  }));
+}
 
 function roundToOneDecimal(value: number) {
   return Math.round(value * 10) / 10;

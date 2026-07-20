@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  createAdaptiveConfirmation,
+  parseAdaptiveAssessmentPayload,
+  type AdaptiveAssessmentPayload,
+} from "@/lib/adaptive/confirmation";
+import { getPassageMetadata } from "@/lib/adaptive/passage-catalog";
 import { analysisSchema, readingLevels, type ReadingAnalysis } from "@/lib/analysisSchema";
-import { recomputeConfirmedReadingAnalysis } from "@/lib/assessment-confirmation";
+import {
+  confirmedAnalysisToEvidenceWords,
+  recomputeConfirmedReadingAnalysis,
+} from "@/lib/assessment-confirmation";
 import {
   confirmAssessmentRequestSchema,
   timestampedTranscriptSchema,
@@ -15,6 +24,7 @@ export const maxDuration = 60;
 
 type DraftAssessmentRecord = {
   analysis_json: unknown;
+  created_at: string;
   id: string;
   passage_id: string;
   student_id: string;
@@ -24,6 +34,19 @@ type DraftAssessmentRecord = {
 
 type PassageRecord = {
   level: string;
+};
+
+type StudentRecord = {
+  name: string;
+};
+
+type ConfirmedAssessmentHistoryRecord = {
+  analysis_json: unknown;
+};
+
+type StoredAnalysis = {
+  adaptive: AdaptiveAssessmentPayload | null;
+  analysis: ReadingAnalysis;
 };
 
 function jsonError(error: string, status: number) {
@@ -41,6 +64,7 @@ function isReadingLevel(value: string): value is ReadingLevel {
 function responseForAssessment(
   assessment: Pick<DraftAssessmentRecord, "id" | "student_id">,
   analysis: ReadingAnalysis,
+  adaptive: AdaptiveAssessmentPayload | null = null,
 ) {
   const response: ConfirmAssessmentResponse = {
     assessment: {
@@ -53,13 +77,24 @@ function responseForAssessment(
     },
   };
 
+  if (adaptive) {
+    response.adaptive = adaptive.focus;
+  }
+
   return NextResponse.json(response);
 }
 
-function parseStoredAnalysis(value: unknown) {
-  const parsed = analysisSchema.safeParse(value);
+function parseStoredAnalysis(value: unknown): StoredAnalysis | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
 
-  return parsed.success ? parsed.data : null;
+  const { _adaptive, ...analysisValue } = value as Record<string, unknown>;
+  const parsed = analysisSchema.safeParse(analysisValue);
+
+  return parsed.success
+    ? { adaptive: parseAdaptiveAssessmentPayload(_adaptive), analysis: parsed.data }
+    : null;
 }
 
 export async function POST(
@@ -90,7 +125,7 @@ export async function POST(
     const supabase = createSupabaseAdminClient();
     const { data: draft, error: draftError } = await supabase
       .from("assessments")
-      .select("id, student_id, passage_id, transcript_json, analysis_json, teacher_confirmed")
+      .select("id, student_id, passage_id, transcript_json, analysis_json, teacher_confirmed, created_at")
       .eq("id", assessmentId)
       .maybeSingle<DraftAssessmentRecord>();
 
@@ -103,9 +138,9 @@ export async function POST(
       return jsonError("The assessment draft was not found.", 404);
     }
 
-    const existingAnalysis = parseStoredAnalysis(draft.analysis_json);
+    const existingStoredAnalysis = parseStoredAnalysis(draft.analysis_json);
 
-    if (!existingAnalysis) {
+    if (!existingStoredAnalysis) {
       console.error("Assessment confirmation found an invalid stored analysis.", assessmentId);
       return jsonError("The saved assessment is invalid and cannot be confirmed.", 502);
     }
@@ -113,12 +148,17 @@ export async function POST(
     // A second tap (or a retry after a dropped response) must never create a
     // second assessment or overwrite the teacher's first confirmed decision.
     if (draft.teacher_confirmed) {
-      return responseForAssessment(draft, existingAnalysis);
+      return responseForAssessment(
+        draft,
+        existingStoredAnalysis.analysis,
+        existingStoredAnalysis.adaptive,
+      );
     }
 
     if (
       input.data.overrides.some(
-        (override) => override.passage_word_index >= existingAnalysis.words.length,
+        (override) =>
+          override.passage_word_index >= existingStoredAnalysis.analysis.words.length,
       )
     ) {
       return jsonError("An override refers to a word outside this passage.", 400);
@@ -131,40 +171,90 @@ export async function POST(
       return jsonError("The saved transcript is invalid and cannot be confirmed.", 502);
     }
 
-    const { data: passage, error: passageError } = await supabase
-      .from("passages")
-      .select("level")
-      .eq("id", draft.passage_id)
-      .maybeSingle<PassageRecord>();
+    const [{ data: passage, error: passageError }, { data: student, error: studentError }] =
+      await Promise.all([
+        supabase
+          .from("passages")
+          .select("level")
+          .eq("id", draft.passage_id)
+          .maybeSingle<PassageRecord>(),
+        supabase
+          .from("students")
+          .select("name")
+          .eq("id", draft.student_id)
+          .maybeSingle<StudentRecord>(),
+      ]);
 
     if (passageError) {
       console.error("Assessment confirmation passage lookup failed.", passageError);
       return jsonError("Couldn't load the assessment passage. Please try again.", 502);
     }
 
+    if (studentError) {
+      console.error("Assessment confirmation student lookup failed.", studentError);
+      return jsonError("Couldn't load the student. Please try again.", 502);
+    }
+
     if (!passage || !isReadingLevel(passage.level)) {
       return jsonError("The assessment passage was not found.", 404);
     }
 
+    if (!student) {
+      return jsonError("The assessment student was not found.", 404);
+    }
+
     const confirmed = recomputeConfirmedReadingAnalysis({
-      analysis: existingAnalysis,
+      analysis: existingStoredAnalysis.analysis,
       attemptedLevel: passage.level,
       durationSec: transcript.data.durationSec,
       overrides: input.data.overrides,
+    });
+
+    const { data: confirmedHistory, error: confirmedHistoryError } = await supabase
+      .from("assessments")
+      .select("analysis_json")
+      .eq("student_id", draft.student_id)
+      .eq("teacher_confirmed", true)
+      .returns<ConfirmedAssessmentHistoryRecord[]>();
+
+    if (confirmedHistoryError) {
+      console.error("Assessment confirmation history lookup failed.", confirmedHistoryError);
+      return jsonError("Couldn't confirm the assessment. Please try again.", 502);
+    }
+
+    const adaptive = createAdaptiveConfirmation({
+      assessment: {
+        assessmentId: draft.id,
+        occurredAt: draft.created_at,
+        purpose: "benchmark",
+        studentId: draft.student_id,
+        teacherConfirmed: true,
+      },
+      confirmedReadingCount: (confirmedHistory ?? []).length + 1,
+      historicalAdaptiveAssessments: (confirmedHistory ?? []).flatMap((record) => {
+        const stored = parseStoredAnalysis(record.analysis_json);
+        return stored?.adaptive ? [stored.adaptive] : [];
+      }),
+      passage: getPassageMetadata(draft.passage_id) ?? undefined,
+      scope: { level: confirmed.analysis.level, studentName: student.name },
+      wordOutcomes: confirmedAnalysisToEvidenceWords(
+        confirmed.analysis,
+        input.data.overrides,
+      ),
     });
 
     const { data: updatedDraft, error: updateError } = await supabase
       .from("assessments")
       .update({
         accuracy: confirmed.accuracyPct,
-        analysis_json: confirmed.analysis,
+        analysis_json: { ...confirmed.analysis, _adaptive: adaptive },
         level: confirmed.analysis.level,
         teacher_confirmed: true,
         wcpm: confirmed.wcpm,
       })
       .eq("id", assessmentId)
       .eq("teacher_confirmed", false)
-      .select("id, student_id, passage_id, transcript_json, analysis_json, teacher_confirmed")
+      .select("id, student_id, passage_id, transcript_json, analysis_json, teacher_confirmed, created_at")
       .maybeSingle<DraftAssessmentRecord>();
 
     if (updateError) {
@@ -173,14 +263,14 @@ export async function POST(
     }
 
     if (updatedDraft) {
-      return responseForAssessment(updatedDraft, confirmed.analysis);
+      return responseForAssessment(updatedDraft, confirmed.analysis, adaptive);
     }
 
     // A parallel request may have confirmed the draft immediately before this
     // update. Return that final record to make the endpoint idempotent.
     const { data: alreadyConfirmed, error: alreadyConfirmedError } = await supabase
       .from("assessments")
-      .select("id, student_id, passage_id, transcript_json, analysis_json, teacher_confirmed")
+      .select("id, student_id, passage_id, transcript_json, analysis_json, teacher_confirmed, created_at")
       .eq("id", assessmentId)
       .maybeSingle<DraftAssessmentRecord>();
 
@@ -189,12 +279,16 @@ export async function POST(
       return jsonError("Couldn't confirm the assessment. Please try again.", 502);
     }
 
-    const alreadyConfirmedAnalysis = alreadyConfirmed
+    const alreadyConfirmedStoredAnalysis = alreadyConfirmed
       ? parseStoredAnalysis(alreadyConfirmed.analysis_json)
       : null;
 
-    if (alreadyConfirmed?.teacher_confirmed && alreadyConfirmedAnalysis) {
-      return responseForAssessment(alreadyConfirmed, alreadyConfirmedAnalysis);
+    if (alreadyConfirmed?.teacher_confirmed && alreadyConfirmedStoredAnalysis) {
+      return responseForAssessment(
+        alreadyConfirmed,
+        alreadyConfirmedStoredAnalysis.analysis,
+        alreadyConfirmedStoredAnalysis.adaptive,
+      );
     }
 
     return jsonError("Couldn't confirm the assessment. Please try again.", 502);

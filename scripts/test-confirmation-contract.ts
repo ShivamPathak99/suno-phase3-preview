@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 
 import { analysisSchema } from "../src/lib/analysisSchema";
-import { recomputeConfirmedReadingAnalysis } from "../src/lib/assessment-confirmation";
+import {
+  confirmedAnalysisToEvidenceWords,
+  recomputeConfirmedReadingAnalysis,
+} from "../src/lib/assessment-confirmation";
 import { confirmAssessmentRequestSchema } from "../src/lib/assessment-contract";
 
 const draftAnalysis = analysisSchema.parse({
@@ -34,6 +37,14 @@ assert.equal(corrected.analysis.level, "story");
 assert.equal(corrected.analysis.words[1]?.status, "correct");
 assert.equal(corrected.analysis.words[1]?.confidence, "high");
 assert.equal(draftAnalysis.words[1]?.status, "substituted");
+
+const evidenceWords = confirmedAnalysisToEvidenceWords(corrected.analysis, [
+  { heard_as: null, passage_word_index: 1, status: "correct" },
+  { heard_as: null, passage_word_index: 3, status: "correct" },
+]);
+assert.equal(evidenceWords[0]?.confirmation, "accepted");
+assert.equal(evidenceWords[1]?.confirmation, "edited");
+assert.equal(evidenceWords[3]?.outcome, "correct");
 
 const belowThreshold = recomputeConfirmedReadingAnalysis({
   analysis: draftAnalysis,

@@ -40,6 +40,7 @@ export type StudentProfile = {
 export type BuildStudentProfileInput = {
   activeSkillIds?: readonly SkillId[];
   asOf: string;
+  confirmedReadingCount?: number;
   events: readonly SkillEvidenceEvent[];
   skills?: readonly Skill[];
   studentId: string;
@@ -173,6 +174,7 @@ function isReinforce(metrics: SkillMetrics) {
 export function buildStudentProfile({
   activeSkillIds = [],
   asOf,
+  confirmedReadingCount,
   events,
   skills = readingSkillCatalog,
   studentId,
@@ -237,7 +239,10 @@ export function buildStudentProfile({
   }
 
   return {
-    confirmedReadingCount: new Set(confirmedEvents.map((event) => event.assessmentId)).size,
+    confirmedReadingCount: Math.max(
+      confirmedReadingCount ?? 0,
+      new Set(confirmedEvents.map((event) => event.assessmentId)).size,
+    ),
     skills: skillProfiles,
     studentId,
   };
