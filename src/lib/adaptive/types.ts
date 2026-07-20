@@ -8,6 +8,18 @@ import type { SkillId } from "./skills-catalog";
  */
 export type AserLevel = "letter" | "word" | "paragraph" | "story";
 
+export type EvidenceOutcome =
+  | "correct"
+  | "hesitation"
+  | "self_corrected"
+  | "substituted"
+  | "skipped"
+  | "unclear";
+
+export type ReadingPurpose = "benchmark" | "focused_readback" | "diagnostic";
+export type WordConfidence = "high" | "medium" | "low";
+export type TeacherWordConfirmation = "accepted" | "edited" | "disputed";
+
 /** The `adaptive-card.v1` contract stored in worksheet content JSON. */
 export type AdaptiveCard = {
   v: "adaptive-card.v1";

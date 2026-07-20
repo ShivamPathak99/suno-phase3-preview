@@ -14,7 +14,7 @@
     "reset-demo": "node --env-file=.env.local --import tsx scripts/reset-demo.ts",
     "setup:storage": "node --env-file=.env.local --import tsx scripts/setup-storage.ts",
     "test:guards": "node --import tsx scripts/test-transcription-guard.ts",
-    "test:adaptive": "node --import tsx scripts/test-adaptive-fixtures.ts",
+    "test:adaptive": "node --import tsx scripts/test-adaptive-fixtures.ts && node --import tsx scripts/test-adaptive-evidence.ts",
     "test:reset-demo": "node --import tsx scripts/test-reset-demo-contract.ts",
     "verify:guards": "node --env-file=.env.local --import tsx scripts/verify-transcription-guard-live.ts",
     "test:analysis": "node --import tsx scripts/test-analysis-contract.ts",
