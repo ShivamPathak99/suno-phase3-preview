@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "check:all": "npm.cmd run lint && npm.cmd run typecheck && npm.cmd run test:adaptive && npm.cmd run test:reset-demo && npm.cmd run test:guards && npm.cmd run test:analysis && npm.cmd run test:confirmation && npm.cmd run test:focus-panel && npm.cmd run test:golden && npm.cmd run test:worksheets && npm.cmd run test:worksheet-page && npm.cmd run test:adaptive-card-page && npm.cmd run test:practice-purpose",
+    "check:all": "npm.cmd run lint && npm.cmd run typecheck && npm.cmd run test:adaptive && npm.cmd run test:reset-demo && npm.cmd run test:guards && npm.cmd run test:analysis && npm.cmd run test:confirmation && npm.cmd run test:focus-panel && npm.cmd run test:golden && npm.cmd run test:worksheets && npm.cmd run test:worksheet-page && npm.cmd run test:adaptive-card-page && npm.cmd run test:practice-purpose && npm.cmd run test:placement-exclusion",
     "risk-spike": "node --env-file=.env.local --import tsx scripts/risk-spike.ts",
     "seed": "node --env-file=.env.local --import tsx scripts/seed.ts",
     "reset-demo": "node --env-file=.env.local --import tsx scripts/reset-demo.ts",
@@ -28,7 +28,8 @@
     "verify:worksheets": "node --env-file=.env.local --import tsx scripts/verify-worksheet-live.ts",
     "test:worksheet-page": "node --import tsx scripts/test-worksheet-page-contract.ts",
     "test:adaptive-card-page": "node --import tsx scripts/test-adaptive-card-page-contract.ts",
-    "test:practice-purpose": "node --import tsx scripts/test-practice-purpose-contract.ts"
+    "test:practice-purpose": "node --import tsx scripts/test-practice-purpose-contract.ts",
+    "test:placement-exclusion": "node --import tsx scripts/test-placement-exclusion.ts"
   },
   "engines": {
     "node": ">=20.9.0"

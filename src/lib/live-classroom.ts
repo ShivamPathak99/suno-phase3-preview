@@ -14,6 +14,7 @@ type StudentRecord = {
 };
 
 type ConfirmedAssessmentRecord = {
+  analysis_json: unknown;
   created_at: string;
   id: string;
   level: string;
@@ -34,30 +35,39 @@ function emptyLevelCounts() {
 }
 
 /**
- * Builds the heatmap from persisted, teacher-confirmed assessments. The
- * newest confirmed assessment wins placement while all confirmed attempts
- * remain counted on each student's card.
+ * Placement is strictly the benchmark model. Older assessment rows predate
+ * `_adaptive.purpose`, so missing purpose remains a benchmark for backwards
+ * compatibility; any explicit non-benchmark purpose is excluded.
  */
-export async function getLiveClassroom(
-  newlyConfirmedAssessmentId?: string,
-): Promise<MockClassroom> {
-  const supabase = createSupabaseAdminClient();
-  const [studentsResult, assessmentsResult] = await Promise.all([
-    supabase.from("students").select("id, name").order("name", { ascending: true }),
-    supabase
-      .from("assessments")
-      .select("id, student_id, level, created_at")
-      .eq("teacher_confirmed", true)
-      .order("created_at", { ascending: false }),
-  ]);
-
-  if (studentsResult.error || assessmentsResult.error) {
-    console.error("Classroom dashboard lookup failed.", studentsResult.error ?? assessmentsResult.error);
-    throw new Error("Couldn't load the classroom dashboard.");
+export function isPlacementAssessment(analysisJson: unknown) {
+  if (typeof analysisJson !== "object" || analysisJson === null || Array.isArray(analysisJson)) {
+    return true;
   }
 
-  const students = (studentsResult.data ?? []) as StudentRecord[];
-  const confirmedAssessments = (assessmentsResult.data ?? []) as ConfirmedAssessmentRecord[];
+  const analysis = analysisJson as { _adaptive?: unknown; v?: unknown };
+
+  if (analysis.v === "math-check.v1") {
+    return false;
+  }
+
+  if (typeof analysis._adaptive !== "object" || analysis._adaptive === null) {
+    return true;
+  }
+
+  const purpose = (analysis._adaptive as { purpose?: unknown }).purpose;
+
+  return purpose === undefined || purpose === "benchmark";
+}
+
+export function buildLiveClassroom({
+  confirmedAssessments,
+  newlyConfirmedAssessmentId,
+  students,
+}: {
+  confirmedAssessments: readonly ConfirmedAssessmentRecord[];
+  newlyConfirmedAssessmentId?: string;
+  students: readonly StudentRecord[];
+}): MockClassroom {
   const latestByStudent = new Map<
     string,
     ConfirmedAssessmentRecord & { level: ReadingLevel }
@@ -65,7 +75,7 @@ export async function getLiveClassroom(
   const assessmentCountByStudent = new Map<string, number>();
 
   for (const assessment of confirmedAssessments) {
-    if (!isReadingLevel(assessment.level)) {
+    if (!isPlacementAssessment(assessment.analysis_json) || !isReadingLevel(assessment.level)) {
       continue;
     }
 
@@ -126,4 +136,36 @@ export async function getLiveClassroom(
     students: dashboardStudents,
     unassessedStudents,
   };
+}
+
+/**
+ * Loads the persisted benchmark model for the classroom board. Practice and
+ * diagnostic records are deliberately fetched only to be excluded by the
+ * pure placement boundary above, guarding against a future query regression.
+ */
+export async function getLiveClassroom(
+  newlyConfirmedAssessmentId?: string,
+): Promise<MockClassroom> {
+  const supabase = createSupabaseAdminClient();
+  const [studentsResult, assessmentsResult] = await Promise.all([
+    supabase.from("students").select("id, name").order("name", { ascending: true }),
+    supabase
+      .from("assessments")
+      .select("id, student_id, level, created_at, analysis_json")
+      .eq("teacher_confirmed", true)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (studentsResult.error || assessmentsResult.error) {
+    console.error("Classroom dashboard lookup failed.", studentsResult.error ?? assessmentsResult.error);
+    throw new Error("Couldn't load the classroom dashboard.");
+  }
+
+  const students = (studentsResult.data ?? []) as StudentRecord[];
+  const confirmedAssessments = (assessmentsResult.data ?? []) as ConfirmedAssessmentRecord[];
+  return buildLiveClassroom({
+    confirmedAssessments,
+    newlyConfirmedAssessmentId,
+    students,
+  });
 }
