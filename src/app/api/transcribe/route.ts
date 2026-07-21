@@ -4,6 +4,7 @@ import {
   TranscriptionRequestError,
   transcribePublicAudio,
 } from "@/lib/transcribe-audio";
+import { guardOpenAiRoute } from "@/lib/auth/openai-rate-limit";
 import { guardTranscriptionForAnalysis } from "@/lib/transcription-guard";
 
 export const runtime = "nodejs";
@@ -18,6 +19,12 @@ function jsonError(error: string, status: number) {
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = await guardOpenAiRoute();
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   let body: TranscribeRequest;
 
   try {

@@ -4,7 +4,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isPublicAppPath, loginRedirectPath } from "@/lib/auth/middleware";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
-export async function middleware(request: NextRequest) {
+/**
+ * Next 16's request interception convention (formerly middleware). F1.2
+ * requires every sessionless app route to return through the login door.
+ */
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { supabaseAnonKey, supabaseUrl } = getSupabasePublicConfig();
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {

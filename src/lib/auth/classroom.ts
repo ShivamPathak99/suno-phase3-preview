@@ -13,11 +13,11 @@ export async function getCurrentClassroom(): Promise<CurrentClassroom | null> {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError) {
-    throw userError;
-  }
   if (!user) {
     return null;
+  }
+  if (userError) {
+    throw userError;
   }
 
   const { data: ownedClassroom, error: ownedClassroomError } = await supabase

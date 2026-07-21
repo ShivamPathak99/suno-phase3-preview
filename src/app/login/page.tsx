@@ -1,3 +1,4 @@
+import { DemoLoginButton } from "@/components/demo-login-button";
 import { LoginForm } from "@/components/login-form";
 import { safeNextPath } from "@/lib/auth/redirects";
 
@@ -17,10 +18,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <p className="login-intro">Suno helps teachers hear where every child&apos;s reading is.</p>
         <LoginForm nextPath={nextPath} />
         <div className="login-divider" role="presentation" />
-        <button className="login-demo-action" disabled type="button">
-          <span>Explore the demo classroom</span>
-          <small>No account needed — a full sample class resets nightly.</small>
-        </button>
+        <DemoLoginButton nextPath={nextPath} />
         <p className="login-support">
           Need an account? Suno is onboarding schools through partners — write to us.
         </p>

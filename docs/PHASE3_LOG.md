@@ -26,3 +26,11 @@
 - Added the approved `@supabase/ssr` clients, `/login`, protected-page middleware with safe return paths, and a quiet teacher account/sign-out menu.
 - Added `npm.cmd run create-teacher -- --email teacher@example.com --classroom "Class 3A" [--grade 3]`. It creates the auth user and classroom, then prints a one-time set-password link instead of sending email in preview.
 - Automated auth contracts, `npm.cmd run check:all`, and the production build pass. Manual acceptance remains: provision an actual teacher email and confirm that account reaches its empty owned classroom.
+
+## P3-T4 — Demo door and sandbox protection
+
+- Activated the first-class login demo button: it creates (or reuses) a Supabase anonymous session, preserves the safe `next` destination, and enters the seeded demo classroom through the existing RLS chain.
+- Added the F1.2 soft cap in `src/lib/auth/openai-rate-limit.ts`: 30 OpenAI-backed calls per hour per Supabase session across transcription, analysis, and worksheets. It returns 401 before an unsigned call reaches a model and 429 with `Retry-After` when capped. Its deterministic unit test is part of `test:phase3`.
+- Added the protected `/api/cron/reset-demo` endpoint and `vercel.json` schedule. The preview default is 02:00 Asia/Kolkata (20:30 UTC); the route requires both a matching `CRON_SECRET` and `SUNO_DEMO_RESET_TARGET=phase3-preview` before it can change demo data.
+- During local smoke verification, a signed-out route exposed that Next 16 does not load a root request guard when the app lives in `src/app`. The guard is now `src/proxy.ts` (the current Next 16 convention), and production-mode checks confirm `/` and deep links redirect to `/login?next=...` while `/login` remains reachable.
+- Remaining manual preview setup: enable Supabase anonymous sign-ins, then set the same random `CRON_SECRET` and `SUNO_DEMO_RESET_TARGET=phase3-preview` in the phase3 preview deployment environment before relying on the live nightly reset.

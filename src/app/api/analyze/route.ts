@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { AnalyzeRequest, AnalyzeResponse } from "@/lib/assessment-contract";
 import { analyzeRequestSchema } from "@/lib/assessment-contract";
 import { analyzeReading } from "@/lib/analyze-reading";
+import { guardOpenAiRoute } from "@/lib/auth/openai-rate-limit";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { guardTranscriptionForAnalysis } from "@/lib/transcription-guard";
 
@@ -25,6 +26,12 @@ function parseRequest(body: unknown): AnalyzeRequest | null {
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = await guardOpenAiRoute();
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   let body: unknown;
 
   try {

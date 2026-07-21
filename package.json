@@ -14,7 +14,7 @@
     "reset-demo": "node --env-file=.env.local --import tsx scripts/reset-demo.ts",
     "setup:storage": "node --env-file=.env.local --import tsx scripts/setup-storage.ts",
     "test:guards": "node --import tsx scripts/test-transcription-guard.ts",
-    "test:phase3": "node --import tsx scripts/test-phase3-policies.ts && node --import tsx scripts/test-phase3-seed.ts && node --import tsx scripts/test-auth-contract.ts",
+    "test:phase3": "node --import tsx scripts/test-phase3-policies.ts && node --import tsx scripts/test-phase3-seed.ts && node --import tsx scripts/test-auth-contract.ts && node --import tsx scripts/test-openai-rate-limit.ts",
     "create-teacher": "node --env-file=.env.local --import tsx scripts/create-teacher.ts",
     "test:adaptive": "node --import tsx scripts/test-adaptive-fixtures.ts && node --import tsx scripts/test-adaptive-evidence.ts && node --import tsx scripts/test-adaptive-profile.ts && node --import tsx scripts/test-adaptive-selection.ts && node --import tsx scripts/test-adaptive-card-validation.ts",
     "test:adaptive-grouping": "node --import tsx scripts/test-adaptive-grouping.ts",

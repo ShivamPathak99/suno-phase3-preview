@@ -9,6 +9,7 @@ import {
   validateAdaptiveWorksheetFocus,
 } from "@/lib/adaptive/worksheet";
 import { generateWorksheet } from "@/lib/generate-worksheet";
+import { guardOpenAiRoute } from "@/lib/auth/openai-rate-limit";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { worksheetRequestSchema } from "@/lib/worksheetSchema";
 
@@ -329,4 +330,14 @@ export function createWorksheetPostHandler(
   };
 }
 
-export const POST = createWorksheetPostHandler();
+const worksheetPostHandler = createWorksheetPostHandler();
+
+export async function POST(request: NextRequest) {
+  const rateLimitResponse = await guardOpenAiRoute();
+
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
+  return worksheetPostHandler(request);
+}
