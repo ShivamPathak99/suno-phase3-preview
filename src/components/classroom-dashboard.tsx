@@ -24,6 +24,7 @@ type ClassroomDashboardProps = {
   groups: SuggestedGroup[];
   isDemoClassroom: boolean;
   levelCounts: Record<ReadingLevel, number>;
+  movementCount: number;
   students: DashboardStudent[];
   unassessedStudents: UnassessedStudent[];
 };
@@ -352,6 +353,7 @@ export function ClassroomDashboard({
   groups,
   isDemoClassroom,
   levelCounts,
+  movementCount,
   students,
   unassessedStudents,
 }: ClassroomDashboardProps) {
@@ -502,6 +504,7 @@ export function ClassroomDashboard({
         </nav>
 
         {statusMessage ? <p className="roster-status" role="status">{statusMessage}</p> : null}
+        {movementCount > 0 ? <p className="class-movement-banner">{movementCount} {movementCount === 1 ? "child has" : "children have"} moved up in the recorded reading history.</p> : null}
 
         {unassessedStudents.length > 0 ? (
           <section className="unassessed-section" aria-labelledby="unassessed-title">
@@ -528,6 +531,7 @@ export function ClassroomDashboard({
                   <span aria-hidden="true" className="level-column-icon"><LevelIcon level={level} /></span>
                   <div><h2 id={`level-heading-${level}`}>{levelLabels[level]}</h2><p>{childCountLabel(levelStudents.length)}</p></div>
                 </header>
+                {groupRecommendation?.kind === "focused_card" ? <p className="column-attention-chip">Practice focus: {groupRecommendation.reason}</p> : null}
                 <ul className="level-student-grid">
                   {levelStudents.length > 0 ? levelStudents.map((student) => (
                     <li key={student.id}><StudentCard onArchive={openArchiveChild} onEdit={openEditChild} onMenuToggle={(id) => setOpenMenuId(openMenuId === id ? null : id)} openMenuId={openMenuId} student={student} /></li>

@@ -89,3 +89,7 @@
 ## P3-T14 — Student journey page
 
 - Added `/student/[id]` with designed rich, thin, practice-only, and archived states: benchmark trends, skill map, separate practice activity, and a confirmed-reading diary. Roster names now open the journey page.
+
+## P3-T15 — Parent report
+
+- Added a printable, one-page parent snapshot with strengths, one useful focus, simple home practice, and separate benchmark/practice activity. It gracefully renders when evidence is thin and is linked from every student journey.

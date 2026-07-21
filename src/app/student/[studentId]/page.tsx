@@ -27,7 +27,7 @@ export default async function StudentPage({ params }: { params: Promise<{ studen
         <header className="student-page-header">
           <Link className="back-link" href="/">Class</Link>
           <div><p>Learning journey</p><h1>{student.name}</h1></div>
-          {!student.is_archived ? <Link className="primary-action" href={`/assess/${student.id}`}>Assess</Link> : null}
+          <div className="student-page-actions"><Link className="secondary-action" href={`/student/${student.id}/report`}>Print report</Link>{!student.is_archived ? <Link className="primary-action" href={`/assess/${student.id}`}>Assess</Link> : null}</div>
         </header>
         {student.is_archived ? <p className="student-readonly">Archived child — this history is read-only.</p> : null}
         {!hasBenchmark ? (

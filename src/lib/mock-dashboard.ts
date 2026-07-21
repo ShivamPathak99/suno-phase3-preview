@@ -43,6 +43,7 @@ export type MockClassroom = {
   groupRecommendations: Partial<Record<ReadingLevel, GroupRecommendation>>;
   groups: SuggestedGroup[];
   levelCounts: Record<ReadingLevel, number>;
+  movementCount: number;
   students: DashboardStudent[];
   unassessedStudents: UnassessedStudent[];
 };
@@ -149,6 +150,7 @@ export function getMockClassroom(
     ),
     groups,
     levelCounts,
+    movementCount: 0,
     students,
     unassessedStudents,
   };

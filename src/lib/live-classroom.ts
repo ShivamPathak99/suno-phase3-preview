@@ -43,6 +43,8 @@ function emptyLevelCounts() {
   } as Record<ReadingLevel, number>;
 }
 
+const readingLevelOrder: ReadingLevel[] = ["letter", "word", "paragraph", "story"];
+
 export { isPlacementAssessment } from "@/lib/student-placement";
 
 export function buildLiveClassroom({
@@ -107,6 +109,14 @@ export function buildLiveClassroom({
       number: index + 1,
     }));
   const confirmedStudent = dashboardStudents.find((student) => student.isNewlyConfirmed) ?? null;
+  const movementCount = students.filter((student) => {
+    const levels = confirmedAssessments
+      .filter((assessment) => assessment.student_id === student.id && isPlacementAssessment(assessment.analysis_json))
+      .sort((left, right) => left.created_at.localeCompare(right.created_at))
+      .map((assessment) => assessment.level)
+      .filter((level): level is ReadingLevel => readingLevelOrder.includes(level as ReadingLevel));
+    return levels.some((level, index) => index > 0 && readingLevelOrder.indexOf(level) > readingLevelOrder.indexOf(levels[index - 1]!));
+  }).length;
   const groupRecommendations = {} as MockClassroom["groupRecommendations"];
 
   for (const group of groups) {
@@ -161,6 +171,7 @@ export function buildLiveClassroom({
     groupRecommendations,
     groups,
     levelCounts,
+    movementCount,
     students: dashboardStudents,
     unassessedStudents,
   };
