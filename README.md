@@ -93,7 +93,7 @@ sequenceDiagram
 
 Codex was the development-time builder; GPT-5.6 is a runtime product dependency. They had deliberately different jobs. The majority of Suno’s core functionality was built in **one main Codex session**, so the product did not get split across unrelated agent contexts. We switched responsibilities inside that session—pipeline, product/UI, and platform—while keeping the same frozen contracts and commit history.
 
-> **Codex `/feedback` session ID (primary build chat):** `019f7a2e-323f-7713-b20c-70061fa7d20e`
+> **Codex `/feedback` session IDs:** primary build chat — `019f7a2e-323f-7713-b20c-70061fa7d20e`; additional project session — `019f7a3a-82e1-71c1-a7c4-30f6b81dcff5`.
 
 The human role was not passive: we supplied product intent, sequencing, real test recordings with consent, UI judgment, deployment configuration, and the acceptance decision. Codex supplied implementation speed. The operating rule was: **humans provide sequence, verification, and judgment; Codex provides code.**
 
