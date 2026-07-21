@@ -1,0 +1,1 @@
+"use client";import { useTour } from "@/components/tour-provider";export function TourLaunchButton(){const{start}=useTour();return <button className="quiet-action" onClick={start} type="button">Take the tour</button>}

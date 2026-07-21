@@ -4126,3 +4126,5 @@ input:focus-visible {
     border-bottom: 0;
   }
 }
+
+.tour-layer { inset: 0; position: fixed; z-index: 80; }.tour-shade { background: rgb(0 0 0 / 45%); inset: 0; position: absolute; }.tour-card { background: white; border-radius: 16px; bottom: 20px; box-shadow: 0 8px 32px rgb(0 0 0 / 30%); max-width: 370px; padding: 20px; position: absolute; right: 20px; }.tour-card button { background: var(--board); border: 0; border-radius: 7px; color: white; margin-right: 8px; padding: 8px 10px; }

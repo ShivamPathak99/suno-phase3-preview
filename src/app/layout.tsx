@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Andika, Baloo_2, Noto_Sans, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
+import { TourProvider } from "@/components/tour-provider";
 
 const uiFont = Noto_Sans({
   display: "swap",
@@ -43,7 +44,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${uiFont.variable} ${devanagariFont.variable} ${displayFont.variable} ${passageFont.variable}`}>
-        {children}
+        <TourProvider>{children}</TourProvider>
       </body>
     </html>
   );
