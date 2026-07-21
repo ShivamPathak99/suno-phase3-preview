@@ -26,5 +26,10 @@ export type AssessmentContext = {
   passageOffset?: number;
   passage: AssessmentPassage;
   purpose: ReadingPurpose;
+  /** Present only when this check is a protected next-level probe. */
+  stepUp?: {
+    baseLevel: ReadingLevel;
+    targetLevel: ReadingLevel;
+  };
   student: AssessmentStudent;
 };

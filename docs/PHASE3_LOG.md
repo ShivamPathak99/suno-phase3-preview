@@ -68,3 +68,8 @@
 
 - Live benchmark setup now resolves from the deterministic baseline pool rather than a first matching row. The same upcoming form remains stable on refresh; a confirmed benchmark advances the count, while Change passage advances a bounded deterministic offset.
 - Added the passage-card explanation, a dev-only thin-pool warning, and a wiring contract for selection, cycling, and the refresh behavior.
+
+## P3-T10 — Protected step-up probe
+
+- A latest confirmed benchmark at 90%+ with no more than one hesitation now selects the next reading level. Teacher-provisional placements and focused practice reads remain ineligible, and story never tries to step beyond the ladder.
+- The assessment page explains that the probe cannot move a child down and offers a deterministic base-level alternative. Server-side confirmation promotes at 80% or above, otherwise keeps the prior confirmed level; the boundary and never-demote property are covered by tests.

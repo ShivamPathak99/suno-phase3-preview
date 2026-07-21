@@ -135,6 +135,26 @@ input:focus-visible {
   padding: 11px 14px;
 }
 
+.step-up-banner {
+  background: #fff9e8;
+  border: 1px solid #dbbd69;
+  border-radius: 12px;
+  color: #5f4a19;
+  font-size: 14px;
+  line-height: 20px;
+  margin: -4px 0 18px;
+  padding: 12px 14px;
+}
+
+.step-up-banner strong {
+  display: block;
+  font-weight: 700;
+}
+
+.step-up-banner p {
+  margin: 5px 0 0;
+}
+
 .level-chip {
   align-items: center;
   background: var(--level-tint);

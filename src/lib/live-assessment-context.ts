@@ -3,6 +3,10 @@ import {
   pickBenchmarkPassage,
   type BenchmarkPoolPassage,
 } from "@/lib/adaptive/passage-selector";
+import {
+  getStepUpEligibility,
+  type StepUpProbe,
+} from "@/lib/adaptive/step-up-probe";
 import type { ReadingPurpose } from "@/lib/adaptive/types";
 import type { AssessmentContext, AssessmentPassage, ReadingLevel } from "@/lib/assessment-types";
 import { isBaselineBenchmarkPassageId } from "@/lib/benchmark-passage-pool";
@@ -25,6 +29,7 @@ type PassageRecord = {
 };
 
 type AssessmentRecord = {
+  accuracy: number | null;
   analysis_json: unknown;
   created_at: string;
   id: string;
@@ -40,6 +45,7 @@ export type LiveDraftAssessment = {
 };
 
 export type LiveAssessmentLaunch = {
+  declineStepUp?: boolean;
   passageOffset?: number;
   passageId?: string;
   purpose: ReadingPurpose;
@@ -159,7 +165,20 @@ async function draftAttemptNumber(studentId: string) {
   return Math.max(1, count ?? 0);
 }
 
-async function selectedPassageIdForStudent(studentId: string, passageOffset = 0) {
+type SelectedBenchmarkPassage = {
+  passageId: string;
+  stepUp?: StepUpProbe;
+};
+
+async function selectedPassageForStudent({
+  declineStepUp = false,
+  passageOffset = 0,
+  studentId,
+}: {
+  declineStepUp?: boolean;
+  passageOffset?: number;
+  studentId: string;
+}): Promise<SelectedBenchmarkPassage | null> {
   const supabase = await createSupabaseServerClient();
   const [studentResult, assessmentsResult, passagesResult] = await Promise.all([
     supabase
@@ -169,7 +188,7 @@ async function selectedPassageIdForStudent(studentId: string, passageOffset = 0)
       .maybeSingle<StudentRecord>(),
     supabase
       .from("assessments")
-      .select("id, student_id, passage_id, level, created_at, analysis_json")
+      .select("id, student_id, passage_id, level, accuracy, created_at, analysis_json")
       .eq("student_id", studentId)
       .eq("teacher_confirmed", true)
       .order("created_at", { ascending: false })
@@ -196,6 +215,10 @@ async function selectedPassageIdForStudent(studentId: string, passageOffset = 0)
     student: studentResult.data,
   });
   const targetLevel = placement.level ?? "letter";
+  const stepUp = declineStepUp
+    ? null
+    : getStepUpEligibility({ confirmedAssessments, student: studentResult.data });
+  const selectedLevel = stepUp?.targetLevel ?? targetLevel;
   let language: "en" | "hi" = "en";
   let priorPassageId: string | null = null;
 
@@ -232,7 +255,7 @@ async function selectedPassageIdForStudent(studentId: string, passageOffset = 0)
       passageId: assessment.passage_id,
     })),
     language,
-    level: targetLevel,
+    level: selectedLevel,
     pool,
     selectionOffset: passageOffset,
     studentId,
@@ -240,30 +263,36 @@ async function selectedPassageIdForStudent(studentId: string, passageOffset = 0)
 
   if (selection?.fallback && process.env.NODE_ENV === "development") {
     console.warn(
-      `[Suno] Thin ${language} ${targetLevel} benchmark pool: using least-recently-read fallback.`,
+      `[Suno] Thin ${language} ${selectedLevel} benchmark pool: using least-recently-read fallback.`,
     );
   }
 
-  return selection?.passage.id ?? priorPassageId;
+  const passageId = selection?.passage.id ?? priorPassageId;
+
+  return passageId ? { passageId, stepUp: stepUp ?? undefined } : null;
 }
 
 export async function loadLiveAssessmentContext(
   studentId: string,
   launch: LiveAssessmentLaunch = { purpose: "benchmark" },
 ): Promise<AssessmentContext | null> {
-  const [student, passageId, attemptNumber] = await Promise.all([
+  const [student, selectedPassage, attemptNumber] = await Promise.all([
     loadStudent(studentId),
     launch.passageId
-      ? Promise.resolve(launch.passageId)
-      : selectedPassageIdForStudent(studentId, launch.passageOffset),
+      ? Promise.resolve<SelectedBenchmarkPassage>({ passageId: launch.passageId })
+      : selectedPassageForStudent({
+          declineStepUp: launch.declineStepUp,
+          passageOffset: launch.passageOffset,
+          studentId,
+        }),
     nextAttemptNumber(studentId),
   ]);
 
-  if (!student || !passageId) {
+  if (!student || !selectedPassage) {
     return null;
   }
 
-  const passage = await loadPassage(passageId);
+  const passage = await loadPassage(selectedPassage.passageId);
 
   if (!passage) {
     return null;
@@ -274,6 +303,7 @@ export async function loadLiveAssessmentContext(
     passage,
     passageOffset: launch.purpose === "benchmark" ? launch.passageOffset ?? 0 : undefined,
     purpose: launch.purpose,
+    stepUp: launch.purpose === "benchmark" ? selectedPassage.stepUp : undefined,
     student,
   };
 }

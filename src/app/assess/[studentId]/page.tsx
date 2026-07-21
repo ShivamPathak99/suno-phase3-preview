@@ -25,6 +25,7 @@ type AssessPageProps = {
   searchParams: Promise<{
     assessmentId?: string | string[];
     debug?: string | string[];
+    declineStepUp?: string | string[];
     mock?: string | string[];
     passageOffset?: string | string[];
     passageId?: string | string[];
@@ -55,6 +56,10 @@ function parsePassageOffset(value: string | undefined) {
   const parsed = Number(value);
 
   return Number.isInteger(parsed) && parsed >= 0 && parsed <= 24 ? parsed : 0;
+}
+
+function isStepUpDeclined(value: string | undefined) {
+  return value === "1";
 }
 
 /**
@@ -105,6 +110,7 @@ export default async function AssessPage({ params, searchParams }: AssessPagePro
   }
 
   const purpose = parsePurpose(singleValue(query.purpose));
+  const declineStepUp = isStepUpDeclined(singleValue(query.declineStepUp));
   const passageOffset = parsePassageOffset(singleValue(query.passageOffset));
   const requestedPassageId = singleValue(query.passageId);
 
@@ -113,6 +119,7 @@ export default async function AssessPage({ params, searchParams }: AssessPagePro
   }
 
   const context = await loadLiveAssessmentContext(studentId, {
+    declineStepUp: purpose === "benchmark" ? declineStepUp : undefined,
     passageId: purpose === "focused_readback" ? requestedPassageId : undefined,
     passageOffset: purpose === "benchmark" ? passageOffset : undefined,
     purpose,

@@ -14,6 +14,7 @@ import {
   confirmedAnalysisToEvidenceWords,
   recomputeConfirmedReadingAnalysis,
 } from "@/lib/assessment-confirmation";
+import { isStepUpAttempt } from "@/lib/adaptive/step-up-probe";
 import {
   confirmAssessmentRequestSchema,
   timestampedTranscriptSchema,
@@ -44,10 +45,17 @@ type PassageRecord = {
 
 type StudentRecord = {
   name: string;
+  placement_source: string | null;
+  teacher_placement_level: string | null;
 };
 
 type ConfirmedAssessmentHistoryRecord = {
+  accuracy: number | null;
   analysis_json: unknown;
+  created_at: string;
+  id: string;
+  level: string | null;
+  student_id: string;
 };
 
 type PracticeWorksheetRecord = {
@@ -243,7 +251,7 @@ export async function POST(
         .maybeSingle<PassageRecord>(),
       supabase
         .from("students")
-        .select("name")
+        .select("name, placement_source, teacher_placement_level")
         .eq("id", draft.student_id)
         .maybeSingle<StudentRecord>(),
       existingStoredAnalysis.purpose === "focused_readback"
@@ -289,16 +297,9 @@ export async function POST(
       return jsonError("This practice card is unavailable for confirmation. Please start it again.", 502);
     }
 
-    const confirmed = recomputeConfirmedReadingAnalysis({
-      analysis: existingStoredAnalysis.analysis,
-      attemptedLevel: passage.level,
-      durationSec: transcript.data.durationSec,
-      overrides: input.data.overrides,
-    });
-
     const { data: confirmedHistory, error: confirmedHistoryError } = await supabase
       .from("assessments")
-      .select("analysis_json")
+      .select("id, student_id, level, accuracy, created_at, analysis_json")
       .eq("student_id", draft.student_id)
       .eq("teacher_confirmed", true)
       .returns<ConfirmedAssessmentHistoryRecord[]>();
@@ -307,6 +308,22 @@ export async function POST(
       console.error("Assessment confirmation history lookup failed.", confirmedHistoryError);
       return jsonError("Couldn't confirm the assessment. Please try again.", 502);
     }
+
+    const stepUp =
+      existingStoredAnalysis.purpose === "benchmark"
+        ? isStepUpAttempt({
+            attemptedLevel: passage.level,
+            confirmedAssessments: confirmedHistory ?? [],
+            student,
+          })
+        : null;
+    const confirmed = recomputeConfirmedReadingAnalysis({
+      analysis: existingStoredAnalysis.analysis,
+      attemptedLevel: passage.level,
+      durationSec: transcript.data.durationSec,
+      overrides: input.data.overrides,
+      stepUpBaseLevel: stepUp?.baseLevel,
+    });
 
     const adaptive = createAdaptiveConfirmation({
       assessment: {

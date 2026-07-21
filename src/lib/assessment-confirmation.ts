@@ -11,6 +11,8 @@ type ConfirmationInputs = {
   attemptedLevel: ReadingLevel;
   durationSec: number;
   overrides: AssessmentWordOverride[];
+  /** The last confirmed level when this attempt was an eligible step-up. */
+  stepUpBaseLevel?: ReadingLevel;
 };
 
 export type ConfirmedReadingAnalysis = {
@@ -57,6 +59,11 @@ function levelBelow(level: ReadingLevel) {
   return readingLevelOrder[Math.max(0, index - 1)] ?? "letter";
 }
 
+function isImmediateStepUp(baseLevel: ReadingLevel, attemptedLevel: ReadingLevel) {
+  const baseIndex = readingLevelOrder.indexOf(baseLevel);
+  return readingLevelOrder[baseIndex + 1] === attemptedLevel;
+}
+
 /**
  * Teacher confirmation is the source of truth. The draft model result remains
  * useful for its word marks, while the final accuracy/WCPM and ladder position
@@ -67,6 +74,7 @@ export function recomputeConfirmedReadingAnalysis({
   attemptedLevel,
   durationSec,
   overrides,
+  stepUpBaseLevel,
 }: ConfirmationInputs): ConfirmedReadingAnalysis {
   const overrideByIndex = new Map(
     overrides.map((override) => [override.passage_word_index, override]),
@@ -87,7 +95,14 @@ export function recomputeConfirmedReadingAnalysis({
   const correctWordCount = words.filter((word) => isCountedAsCorrect(word.status)).length;
   const accuracyPct = words.length === 0 ? 0 : roundToOneDecimal((correctWordCount / words.length) * 100);
   const wcpm = roundToOneDecimal((correctWordCount / Math.max(durationSec, 1)) * 60);
-  const level = accuracyPct >= passingAccuracyPct ? attemptedLevel : levelBelow(attemptedLevel);
+  const level =
+    stepUpBaseLevel && isImmediateStepUp(stepUpBaseLevel, attemptedLevel)
+      ? accuracyPct >= passingAccuracyPct
+        ? attemptedLevel
+        : stepUpBaseLevel
+      : accuracyPct >= passingAccuracyPct
+        ? attemptedLevel
+        : levelBelow(attemptedLevel);
 
   return {
     accuracyPct,

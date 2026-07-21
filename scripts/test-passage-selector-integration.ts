@@ -12,7 +12,7 @@ async function main() {
   assert.match(context, /isBaselineBenchmarkPassageId/);
   assert.match(context, /benchmarkCount: benchmarkHistory\.length/);
   assert.match(context, /selectionOffset: passageOffset/);
-  assert.match(context, /Thin \$\{language\} \$\{targetLevel\} benchmark pool/);
+  assert.match(context, /Thin \$\{language\} \$\{selectedLevel\} benchmark pool/);
   assert.match(page, /parsePassageOffset/);
   assert.match(page, /passageOffset: purpose === "benchmark" \? passageOffset : undefined/);
   assert.match(flow, /changePassageHref/);

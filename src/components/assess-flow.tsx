@@ -919,6 +919,11 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
     context.purpose === "benchmark"
       ? `/assess/${context.student.id}?passageOffset=${(context.passageOffset ?? 0) + 1}`
       : "/";
+  const declineStepUpHref = `/assess/${context.student.id}?declineStepUp=1`;
+  const changePassageLabel = context.stepUp
+    ? `Use a ${levelLabels[context.stepUp.baseLevel]} passage instead`
+    : "Change passage";
+  const activeChangePassageHref = context.stepUp ? declineStepUpHref : changePassageHref;
   const reviewHref = completedAssessment
     ? `/assess/${context.student.id}?assessmentId=${encodeURIComponent(completedAssessment.assessmentId)}&purpose=${context.purpose}`
     : `/assess/${context.student.id}?mock=confirm`;
@@ -947,6 +952,14 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
 
         {context.purpose === "focused_readback" ? (
           <PracticeReadBanner studentName={context.student.name} />
+        ) : null}
+        {context.stepUp ? (
+          <section className="step-up-banner" aria-label="Step-up check">
+            <strong>Step-up check — trying the next level</strong>
+            <p>
+              Score below 80% simply keeps {context.student.name} at {levelLabels[context.stepUp.baseLevel]} — this check can&apos;t move them down.
+            </p>
+          </section>
         ) : null}
 
         <div className="passage-area">
@@ -1036,8 +1049,8 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
             >
               No mic? Try a sample child recording
             </button>
-            <Link className="change-passage" href={changePassageHref}>
-              Change passage
+            <Link className="change-passage" href={activeChangePassageHref}>
+              {changePassageLabel}
             </Link>
           </section>
         ) : null}
@@ -1191,8 +1204,8 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
                 <button className="primary-action" onClick={discardRecording} type="button">
                   Record again
                 </button>
-                <Link className="secondary-action" href={changePassageHref}>
-                  Change passage
+                <Link className="secondary-action" href={activeChangePassageHref}>
+                  {changePassageLabel}
                 </Link>
               </>
             }
