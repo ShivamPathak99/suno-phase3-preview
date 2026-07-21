@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { isPublicAppPath, loginRedirectPath } from "../src/lib/auth/middleware";
 import { parseTeacherProvisioningArgs } from "../src/lib/auth/provisioning";
 import { safeNextPath } from "../src/lib/auth/redirects";
+import { defaultTeacherClassroomName } from "../src/lib/auth/classroom";
 
 assert.equal(isPublicAppPath("/login"), true);
 assert.equal(isPublicAppPath("/why"), true);
@@ -13,6 +14,7 @@ assert.equal(safeNextPath("/math/student"), "/math/student");
 assert.equal(safeNextPath("//attacker.example"), "/");
 assert.equal(safeNextPath("https://attacker.example"), "/");
 assert.equal(safeNextPath("/\\attacker.example"), "/");
+assert.equal(defaultTeacherClassroomName, "My classroom");
 
 assert.deepEqual(
   parseTeacherProvisioningArgs([
