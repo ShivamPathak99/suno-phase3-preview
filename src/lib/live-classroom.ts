@@ -197,11 +197,20 @@ export function buildLiveClassroom({
  * pure placement boundary above, guarding against a future query regression.
  */
 export async function getLiveClassroom(
+  classroomId: string | null,
   newlyConfirmedAssessmentId?: string,
 ): Promise<MockClassroom> {
+  if (!classroomId) {
+    return buildLiveClassroom({ confirmedAssessments: [], students: [] });
+  }
+
   const supabase = createSupabaseAdminClient();
   const [studentsResult, assessmentsResult] = await Promise.all([
-    supabase.from("students").select("id, name").order("name", { ascending: true }),
+    supabase
+      .from("students")
+      .select("id, name")
+      .eq("classroom_id", classroomId)
+      .order("name", { ascending: true }),
     supabase
       .from("assessments")
       .select("id, student_id, level, created_at, analysis_json")

@@ -20,3 +20,9 @@
 - Added three English baseline forms per reading level. The realistic demo text has explicit `demo_placeholder` calibration metadata and needs human calibration before a pilot.
 - Seeded dated confirmed history across the F6.2 four-to-eight-week window: Chitra's benchmark promotion, Maya's completed focus episode, and Arjun's resolved dropped-carry math arc.
 - Added the P3-T2 seed/idempotence test to `test:phase3`. Migration `0002` was then applied to the configured preview project; `seed` completed with 20 demo students, 19 passages, and 27 deterministic assessments. A reset dry run correctly scopes all 30 current demo assessments and leaves non-demo rows untouched.
+
+## P3-T3 — Login, provisioning, and route protection
+
+- Added the approved `@supabase/ssr` clients, `/login`, protected-page middleware with safe return paths, and a quiet teacher account/sign-out menu.
+- Added `npm.cmd run create-teacher -- --email teacher@example.com --classroom "Class 3A" [--grade 3]`. It creates the auth user and classroom, then prints a one-time set-password link instead of sending email in preview.
+- Automated auth contracts, `npm.cmd run check:all`, and the production build pass. Manual acceptance remains: provision an actual teacher email and confirm that account reaches its empty owned classroom.

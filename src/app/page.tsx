@@ -1,4 +1,5 @@
 import { ClassroomDashboard } from "@/components/classroom-dashboard";
+import { getCurrentClassroom } from "@/lib/auth/classroom";
 import { getLiveClassroom } from "@/lib/live-classroom";
 import { getMockClassroom } from "@/lib/mock-dashboard";
 
@@ -32,7 +33,11 @@ export default async function Home({ searchParams }: HomePageProps) {
     return <ClassroomDashboard {...getMockClassroom(undefined, "empty-student")} />;
   }
 
-  const classroom = await getLiveClassroom(isUuid(assessmentId) ? assessmentId : undefined);
+  const currentClassroom = await getCurrentClassroom();
+  const classroom = await getLiveClassroom(
+    currentClassroom?.id ?? null,
+    isUuid(assessmentId) ? assessmentId : undefined,
+  );
 
   return <ClassroomDashboard {...classroom} />;
 }

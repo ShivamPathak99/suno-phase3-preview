@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { adaptivePracticePath } from "@/lib/adaptive/card-view";
+import { TeacherAccountMenu } from "@/components/teacher-account-menu";
 import type { GroupRecommendation } from "@/lib/adaptive/grouping";
 import {
   assessmentCaption,
@@ -282,11 +283,14 @@ export function ClassroomDashboard({
               Class 3 <span>· {childCountLabel(totalChildren)}</span>
             </h1>
           </div>
-          {firstStudent ? (
-            <Link className="primary-action dashboard-assess-action" href={"/assess/" + firstStudent.id}>
-              Assess a child
-            </Link>
-          ) : null}
+          <div className="dashboard-header-actions">
+            {firstStudent ? (
+              <Link className="primary-action dashboard-assess-action" href={"/assess/" + firstStudent.id}>
+                Assess a child
+              </Link>
+            ) : null}
+            <TeacherAccountMenu />
+          </div>
         </header>
 
         <nav aria-label="Reading levels" className="level-ladder">

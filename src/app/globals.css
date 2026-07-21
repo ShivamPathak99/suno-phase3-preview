@@ -697,6 +697,135 @@ input:focus-visible {
   }
 }
 
+/* P3-T3 â€” teacher login and account menu. */
+.login-page {
+  align-items: center;
+  display: grid;
+  justify-items: center;
+  min-height: 100vh;
+  padding: 24px 16px;
+}
+
+.login-card {
+  background: var(--card);
+  border: 1px solid var(--ruling);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgb(30 43 51 / 7%);
+  max-width: 448px;
+  padding: 28px 22px 24px;
+  width: 100%;
+}
+
+.login-wordmark {
+  color: var(--board);
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 32px;
+  margin: 0;
+}
+
+.login-card h1 {
+  color: var(--ink);
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 36px;
+  margin: 14px 0 4px;
+}
+
+.login-intro,
+.login-support {
+  color: var(--slate);
+  font-size: 15px;
+  line-height: 22px;
+  margin: 0;
+}
+
+.login-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.login-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.login-form label > span {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.login-form input {
+  background: var(--card);
+  border: 1px solid var(--ruling);
+  border-radius: 9px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 48px;
+  padding: 10px 12px;
+}
+
+.login-submit {
+  margin-top: 4px;
+  width: 100%;
+}
+
+.login-error {
+  color: #a63b36;
+  font-size: 14px;
+  line-height: 20px;
+  margin: -2px 0 0;
+}
+
+.login-divider {
+  border-top: 1px solid var(--ruling);
+  margin: 24px 0 16px;
+}
+
+.login-demo-action {
+  background: #eaf3ef;
+  border: 1px solid #a8cfc4;
+  border-radius: 10px;
+  color: var(--board-dark);
+  cursor: not-allowed;
+  display: grid;
+  gap: 2px;
+  min-height: 66px;
+  padding: 10px 14px;
+  text-align: left;
+  width: 100%;
+}
+
+.login-demo-action span {
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.login-demo-action small {
+  font-family: var(--font-ui), var(--font-devanagari), sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.login-support {
+  font-size: 13px;
+  line-height: 19px;
+  margin-top: 18px;
+}
+
+@media (min-width: 640px) {
+  .login-card {
+    padding: 34px 36px 30px;
+  }
+}
+
 /* B-2 — teacher confirmation screen */
 .confirmation-page {
   padding-bottom: 96px;
@@ -1468,6 +1597,100 @@ input:focus-visible {
   padding-inline: 14px;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.dashboard-header-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: end;
+}
+
+.teacher-account-menu {
+  position: relative;
+}
+
+.teacher-account-menu summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.teacher-account-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.teacher-account-chip,
+.demo-account-chip {
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--ruling);
+  border-radius: 999px;
+  color: var(--ink);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 7px;
+  max-width: 190px;
+  min-height: 40px;
+  padding: 5px 10px 5px 6px;
+}
+
+.demo-account-chip {
+  background: #eaf3ef;
+  border-color: #a8cfc4;
+  color: var(--board-dark);
+}
+
+.account-avatar {
+  align-items: center;
+  background: var(--board);
+  border-radius: 50%;
+  color: white;
+  display: inline-flex;
+  font-size: 12px;
+  height: 27px;
+  justify-content: center;
+  width: 27px;
+}
+
+.demo-account-chip .account-avatar {
+  background: var(--board-dark);
+}
+
+.teacher-account-chip > span:last-child,
+.demo-account-chip > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teacher-account-popover {
+  background: var(--card);
+  border: 1px solid var(--ruling);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(30 43 51 / 14%);
+  display: grid;
+  gap: 2px;
+  min-width: 154px;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 10;
+}
+
+.teacher-account-popover p {
+  color: var(--slate);
+  font-size: 12px;
+  line-height: 18px;
+  margin: 3px 4px;
+}
+
+.teacher-account-popover .quiet-action {
+  justify-content: start;
+  min-height: 38px;
+  padding: 7px 8px;
 }
 
 .level-ladder {
