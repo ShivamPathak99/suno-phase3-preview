@@ -1,7 +1,12 @@
 import { analysisSchema, type ReadingAnalysis } from "@/lib/analysisSchema";
+import {
+  pickBenchmarkPassage,
+  type BenchmarkPoolPassage,
+} from "@/lib/adaptive/passage-selector";
 import type { ReadingPurpose } from "@/lib/adaptive/types";
 import type { AssessmentContext, AssessmentPassage, ReadingLevel } from "@/lib/assessment-types";
-import { resolveStudentPlacement } from "@/lib/student-placement";
+import { isBaselineBenchmarkPassageId } from "@/lib/benchmark-passage-pool";
+import { isPlacementAssessment, resolveStudentPlacement } from "@/lib/student-placement";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type StudentRecord = {
@@ -35,6 +40,7 @@ export type LiveDraftAssessment = {
 };
 
 export type LiveAssessmentLaunch = {
+  passageOffset?: number;
   passageId?: string;
   purpose: ReadingPurpose;
 };
@@ -153,9 +159,9 @@ async function draftAttemptNumber(studentId: string) {
   return Math.max(1, count ?? 0);
 }
 
-async function selectedPassageIdForStudent(studentId: string) {
+async function selectedPassageIdForStudent(studentId: string, passageOffset = 0) {
   const supabase = await createSupabaseServerClient();
-  const [studentResult, assessmentsResult] = await Promise.all([
+  const [studentResult, assessmentsResult, passagesResult] = await Promise.all([
     supabase
       .from("students")
       .select("id, name, placement_source, teacher_placement_level")
@@ -168,59 +174,77 @@ async function selectedPassageIdForStudent(studentId: string) {
       .eq("teacher_confirmed", true)
       .order("created_at", { ascending: false })
       .returns<AssessmentRecord[]>(),
+    supabase
+      .from("passages")
+      .select("id, level, language, title, body")
+      .returns<PassageRecord[]>(),
   ]);
 
-  if (studentResult.error || assessmentsResult.error) {
+  if (studentResult.error || assessmentsResult.error || passagesResult.error) {
     throw new Error("Couldn't load the student's last reading level.");
   }
   if (!studentResult.data) return null;
 
+  const confirmedAssessments = assessmentsResult.data ?? [];
+  const benchmarkHistory = confirmedAssessments.filter((assessment) =>
+    isPlacementAssessment(assessment.analysis_json),
+  );
+  const allPassages = passagesResult.data ?? [];
+
   const placement = resolveStudentPlacement({
-    confirmedAssessments: assessmentsResult.data ?? [],
+    confirmedAssessments,
     student: studentResult.data,
   });
   const targetLevel = placement.level ?? "letter";
   let language: "en" | "hi" = "en";
-  let fallbackPassageId: string | null = null;
+  let priorPassageId: string | null = null;
 
   if (placement.kind === "benchmark" && placement.assessmentId) {
-    const assessment = (assessmentsResult.data ?? []).find(
+    const assessment = confirmedAssessments.find(
       (candidate) => candidate.id === placement.assessmentId,
     );
-    fallbackPassageId = assessment?.passage_id ?? null;
+    priorPassageId = assessment?.passage_id ?? null;
 
-    if (fallbackPassageId) {
-      const { data: priorPassage, error: priorPassageError } = await supabase
-        .from("passages")
-        .select("language")
-        .eq("id", fallbackPassageId)
-        .maybeSingle<{ language: string }>();
-
-      if (priorPassageError) {
-        throw new Error("Couldn't load the student's last reading passage.");
-      }
-
+    if (priorPassageId) {
+      const priorPassage = allPassages.find((passage) => passage.id === priorPassageId);
       if (priorPassage?.language === "en" || priorPassage?.language === "hi") {
         language = priorPassage.language;
       }
     }
   }
 
-  // A teacher-provisional level is valid for choosing a first passage, but it
-  // remains separate from the benchmark model until a reading is confirmed.
-  const { data: starterPassage, error: starterPassageError } = await supabase
-    .from("passages")
-    .select("id")
-    .eq("level", targetLevel)
-    .eq("language", language)
-    .limit(1)
-    .maybeSingle<{ id: string }>();
+  const pool: BenchmarkPoolPassage[] = allPassages.flatMap((passage) =>
+    isReadingLevel(passage.level) && (passage.language === "en" || passage.language === "hi")
+      ? [
+          {
+            id: passage.id,
+            language: passage.language,
+            level: passage.level,
+            source: isBaselineBenchmarkPassageId(passage.id) ? "baseline" : "other",
+          },
+        ]
+      : [],
+  );
+  const selection = pickBenchmarkPassage({
+    benchmarkCount: benchmarkHistory.length,
+    history: benchmarkHistory.map((assessment) => ({
+      occurredAt: assessment.created_at,
+      passageId: assessment.passage_id,
+    })),
+    language,
+    level: targetLevel,
+    pool,
+    selectionOffset: passageOffset,
+    studentId,
+  });
 
-  if (starterPassageError) {
-    throw new Error("Couldn't load a starter reading passage.");
+  if (selection?.fallback && process.env.NODE_ENV === "development") {
+    console.warn(
+      `[Suno] Thin ${language} ${targetLevel} benchmark pool: using least-recently-read fallback.`,
+    );
   }
 
-  return starterPassage?.id ?? fallbackPassageId;
+  return selection?.passage.id ?? priorPassageId;
 }
 
 export async function loadLiveAssessmentContext(
@@ -229,7 +253,9 @@ export async function loadLiveAssessmentContext(
 ): Promise<AssessmentContext | null> {
   const [student, passageId, attemptNumber] = await Promise.all([
     loadStudent(studentId),
-    launch.passageId ? Promise.resolve(launch.passageId) : selectedPassageIdForStudent(studentId),
+    launch.passageId
+      ? Promise.resolve(launch.passageId)
+      : selectedPassageIdForStudent(studentId, launch.passageOffset),
     nextAttemptNumber(studentId),
   ]);
 
@@ -243,7 +269,13 @@ export async function loadLiveAssessmentContext(
     return null;
   }
 
-  return { attemptNumber, passage, purpose: launch.purpose, student };
+  return {
+    attemptNumber,
+    passage,
+    passageOffset: launch.purpose === "benchmark" ? launch.passageOffset ?? 0 : undefined,
+    purpose: launch.purpose,
+    student,
+  };
 }
 
 export async function loadLiveDraftAssessment(

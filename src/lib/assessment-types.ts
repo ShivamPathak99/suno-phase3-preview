@@ -22,6 +22,8 @@ export type AssessmentPassage = {
  */
 export type AssessmentContext = {
   attemptNumber: number;
+  /** The deterministic Change-passage position for this upcoming benchmark. */
+  passageOffset?: number;
   passage: AssessmentPassage;
   purpose: ReadingPurpose;
   student: AssessmentStudent;

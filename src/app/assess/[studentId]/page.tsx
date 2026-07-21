@@ -26,6 +26,7 @@ type AssessPageProps = {
     assessmentId?: string | string[];
     debug?: string | string[];
     mock?: string | string[];
+    passageOffset?: string | string[];
     passageId?: string | string[];
     purpose?: string | string[];
   }>;
@@ -48,6 +49,12 @@ function parsePurpose(value: string | undefined): ReadingPurpose | null {
   }
 
   return value === "focused_readback" ? value : null;
+}
+
+function parsePassageOffset(value: string | undefined) {
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 24 ? parsed : 0;
 }
 
 /**
@@ -98,6 +105,7 @@ export default async function AssessPage({ params, searchParams }: AssessPagePro
   }
 
   const purpose = parsePurpose(singleValue(query.purpose));
+  const passageOffset = parsePassageOffset(singleValue(query.passageOffset));
   const requestedPassageId = singleValue(query.passageId);
 
   if (!purpose || (purpose === "focused_readback" && !isUuid(requestedPassageId))) {
@@ -106,6 +114,7 @@ export default async function AssessPage({ params, searchParams }: AssessPagePro
 
   const context = await loadLiveAssessmentContext(studentId, {
     passageId: purpose === "focused_readback" ? requestedPassageId : undefined,
+    passageOffset: purpose === "benchmark" ? passageOffset : undefined,
     purpose,
   });
 
@@ -114,7 +123,7 @@ export default async function AssessPage({ params, searchParams }: AssessPagePro
       <AssessFlow
         context={context}
         debugMode={debugMode}
-        key={context.student.id + ":" + (debugMode ?? "ready")}
+        key={context.student.id + ":" + context.passage.id + ":" + (debugMode ?? "ready")}
       />
     );
   }

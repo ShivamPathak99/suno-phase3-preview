@@ -63,3 +63,8 @@
 
 - Added the pure, offline `passage-selector.ts`: selection is stable from `studentId:confirmedBenchmarkCount`, filters the last two forms and the 21-day memory window, and never blocks a check when a thin pool requires least-recently-read fallback.
 - Added explicit baseline passage registration, English difficulty-band validation (word count, mean sentence length, and vocabulary tier), and a deterministic test covering refresh stability, post-confirm rotation, fallback, and Hindi language scoping.
+
+## P3-T9 — Selector integration and passage cycling
+
+- Live benchmark setup now resolves from the deterministic baseline pool rather than a first matching row. The same upcoming form remains stable on refresh; a confirmed benchmark advances the count, while Change passage advances a bounded deterministic offset.
+- Added the passage-card explanation, a dev-only thin-pool warning, and a wiring contract for selection, cycling, and the refresh behavior.

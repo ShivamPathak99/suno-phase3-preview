@@ -915,6 +915,10 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
   const passageIsDimmed = flowState === "processing";
   const levelClassName = `level-${context.passage.level}`;
   const completionAnalysis = completedAssessment?.analysis ?? mockAnalysis;
+  const changePassageHref =
+    context.purpose === "benchmark"
+      ? `/assess/${context.student.id}?passageOffset=${(context.passageOffset ?? 0) + 1}`
+      : "/";
   const reviewHref = completedAssessment
     ? `/assess/${context.student.id}?assessmentId=${encodeURIComponent(completedAssessment.assessmentId)}&purpose=${context.purpose}`
     : `/assess/${context.student.id}?mock=confirm`;
@@ -952,6 +956,11 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
           >
             <p className="passage-title">{context.passage.title}</p>
             <p className="passage-text">{context.passage.body}</p>
+            {context.purpose === "benchmark" ? (
+              <p className="passage-rotation-note">
+                ⓘ This passage stays the same on refresh and rotates after a confirmed check.
+              </p>
+            ) : null}
           </article>
 
           {flowState === "processing" ? (
@@ -1027,7 +1036,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
             >
               No mic? Try a sample child recording
             </button>
-            <Link className="change-passage" href="/">
+            <Link className="change-passage" href={changePassageHref}>
               Change passage
             </Link>
           </section>
@@ -1182,7 +1191,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
                 <button className="primary-action" onClick={discardRecording} type="button">
                   Record again
                 </button>
-                <Link className="secondary-action" href="/">
+                <Link className="secondary-action" href={changePassageHref}>
                   Change passage
                 </Link>
               </>

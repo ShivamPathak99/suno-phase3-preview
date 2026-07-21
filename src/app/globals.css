@@ -221,6 +221,14 @@ input:focus-visible {
   white-space: pre-line;
 }
 
+.passage-rotation-note {
+  color: var(--slate);
+  font-family: var(--font-ui), sans-serif;
+  font-size: 12px;
+  line-height: 18px;
+  margin: 18px 0 0;
+}
+
 .recording-control {
   align-items: center;
   display: flex;
