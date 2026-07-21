@@ -101,3 +101,15 @@
 ## P3-T17 — Public evidence page
 
 - Added the public `/why` page with source-chip statistics, accessible chart/table toggles, an explicitly illustrative reading-gap graphic, the teacher-centred loop, guardrail rationale, and a clear in-development numeracy statement.
+
+## P3-T18/T19 — Guided-tour foundation
+
+- Added the dependency-free tour state machine, an Escape-safe overlay, target polling with missing-target skip, route navigation, and permanent launch controls. Marked dashboard and confirmation targets provide the first walkthrough path; the preview simulation below is the acceptance layer for the full human journey.
+
+## P3-T20 — Judge simulation
+
+- Added `docs/JUDGE_SIM.md`, a non-destructive preview walkthrough covering demo entry, the reading loop, rotation and step-up behavior, roster changes, insights, print, evidence pages, and auth. Automated checks can validate contracts, but the two human walkthroughs remain an explicit acceptance requirement.
+
+## P3-T21 — Handoff documentation
+
+- Updated the README with Phase 3 capabilities, commands, auth/demo model, deterministic-core locations, the judge simulation, and the remaining pre-pilot privacy/calibration limits. Final sign-off requires two human walkthroughs of the preview and a fresh full suite/build after any fixes.

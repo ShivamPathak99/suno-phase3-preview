@@ -2,6 +2,20 @@
 
 Suno is a teacher-first oral-reading assessment workflow for early-grade classrooms.
 
+## Phase 3 preview
+
+The Phase 3 preview adds a simple teacher/demo entry, classroom roster controls, deterministic benchmark passage rotation, protected step-up checks, teacher-confirmed feedback, student journeys, parent reports, methodology pages, and a guided-tour foundation.
+
+- Use **Explore the demo classroom** on `/login` for a resettable anonymous demo. Real teacher accounts are provisioned with `npm.cmd run create-teacher`.
+- The preview uses Supabase RLS for classroom-scoped rows. The service key is limited to seed/reset/provisioning maintenance paths.
+- Run `npm.cmd run check:all` for the offline suite and `npm.cmd run build` for the production build.
+- Phase 3’s deterministic cores live in `src/lib/adaptive/passage-selector.ts`, `src/lib/adaptive/step-up-probe.ts`, `src/lib/analytics/lagging.ts`, `src/lib/analytics/student-timeline.ts`, and `src/lib/tour/engine.ts`.
+- See [the judge simulation](./docs/JUDGE_SIM.md) for preview acceptance, and [the Phase 3 log](./docs/PHASE3_LOG.md) for ticket history.
+
+### Honest limits before a pilot
+
+This is a classroom demo, not a production child-data deployment. Consent capture, private audio retention/deletion controls, calibrated benchmark content, and formal accessibility/privacy review remain pre-pilot work. AI drafts word marks; teachers confirm every instructional result.
+
 For the current capabilities, screenshots, technical architecture, verification commands, and known demo limits, see [Suno Current Capabilities & Technical Guide](./docs/SUNO_CURRENT_CAPABILITIES.md).
 
 ## Local setup
