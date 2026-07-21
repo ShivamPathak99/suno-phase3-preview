@@ -2725,6 +2725,16 @@ input:focus-visible {
   padding: 28px;
 }
 
+.empty-class-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.empty-class-heading .dashboard-wordmark {
+  margin: 0;
+}
+
 .empty-class-invitation > p:not(.dashboard-wordmark) {
   color: var(--slate);
   font-size: 16px;

@@ -471,7 +471,10 @@ export function ClassroomDashboard({
   const dashboardContent = totalChildren === 0 ? (
     <main className="dashboard-page">
       <section className="empty-class-invitation">
-        <p className="dashboard-wordmark">Suno</p>
+        <div className="empty-class-heading">
+          <p className="dashboard-wordmark">Suno</p>
+          <TeacherAccountMenu />
+        </div>
         <h1>Listen to your first reader</h1>
         <p>Start with one child. Suno will help you see the class take shape.</p>
         <button className="primary-action empty-class-add-action" onClick={openAddChild} type="button">Add your first child</button>

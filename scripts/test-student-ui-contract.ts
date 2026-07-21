@@ -12,6 +12,7 @@ for (const expected of [
   "Teacher placed",
   "Archived ({archivedStudents.length})",
   "Restore",
+  "empty-class-heading",
   "This is a demo child — nightly reset will restore them.",
   "No children at this level yet.",
 ]) {
