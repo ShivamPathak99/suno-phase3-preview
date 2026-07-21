@@ -87,28 +87,146 @@ sequenceDiagram
 - **Cost and failure controls:** OpenAI-backed routes have a per-session demo limit, one transient retry, structured error states, and audio guards before analysis.
 - **Verification:** the repository has contract and fixture tests for auth, RLS assumptions, adaptive selection, confirmation, math diagnosis, UI contracts, transcription guards, and the golden harness.
 
-## How GPT-5.6 is used
+## How Codex accelerated the build
 
-GPT-5.6 is used for bounded, schema-constrained tasks—not for the final educational decision.
+### One main session, with a real engineering process
 
-| Task | Input | Required output | Local safeguards |
-| --- | --- | --- | --- |
-| Reading analysis | Server-loaded passage plus Whisper’s timestamped transcript | One ordered mark for each passage word; status, confidence, WCPM, accuracy, suggested level, teacher summary, and focus | Strict JSON Schema; exact passage-word validation; one corrective retry; wrong-passage and unassessable guards; teacher confirmation required. |
-| Practice worksheet | Requested reading level and language | `{ title, body, question }` | Strict JSON Schema; word-count and one-question checks; one corrective retry; A4 print layout. |
+Codex was the development-time builder; GPT-5.6 is a runtime product dependency. They had deliberately different jobs. The majority of Suno’s core functionality was built in **one main Codex session**, so the product did not get split across unrelated agent contexts. We switched responsibilities inside that session—pipeline, product/UI, and platform—while keeping the same frozen contracts and commit history.
 
-The actual model calls live in [`src/lib/analyze-reading.ts`](./src/lib/analyze-reading.ts) and [`src/lib/generate-worksheet.ts`](./src/lib/generate-worksheet.ts). The audio transcription step uses `whisper-1` with `verbose_json` word timestamps in [`src/lib/transcribe-audio.ts`](./src/lib/transcribe-audio.ts).
+> **Codex `/feedback` session ID:** this is submitted in the hackathon form from the primary build chat. It is not stored in the public repository because it identifies a private conversation. Do not substitute a made-up ID; use the actual `/feedback` result from the main build session.
 
-## Where Codex accelerated the build
+The human role was not passive: we supplied product intent, sequencing, real test recordings with consent, UI judgment, deployment configuration, and the acceptance decision. Codex supplied implementation speed. The operating rule was: **humans provide sequence, verification, and judgment; Codex provides code.**
 
-Codex was used as an engineering collaborator across the project, while product decisions and acceptance remained human-reviewed. It accelerated:
+### Docs before code
 
-- implementation of the Next.js/Supabase routes, RLS-aware data access, and UI flows;
-- creation of typed contracts, strict Zod/JSON-Schema validation, deterministic adaptive and numeracy engines, and fixture-driven tests;
-- troubleshooting deploy-time storage/RLS and audio-upload failures;
-- building the curated golden-audio harness, seeded demo data, migration scripts, documentation, and judge walkthrough;
-- iterative UI fixes and the current technical documentation.
+Before implementation, the main session was given the product/architecture brief, execution plan, UI specification, and operating workflow. The session began with an alignment check, not code: restate the planned ticket order, name the frozen contracts, flag ambiguity, and wait for approval. That reduced the common agent failure mode of quickly building a plausible but different product.
 
-Key design decisions made during that collaboration were to keep the teacher in control, make placement changes deterministic and server-validated, use GPT-5.6 only behind strict schemas, reject bad audio before analysis, and keep demo data isolated/resettable. Those choices are visible in code and are not claimed as a substitute for educational validation or a privacy review.
+The source planning materials remain in this repository:
+
+- [`PROJECT.md`](./AGENT_EXECUTION_PLAN/PROJECT.md) — problem framing, product loop, architecture, and risks.
+- [`AGENT_EXECUTION_PLAN.md`](./AGENT_EXECUTION_PLAN/AGENT_EXECUTION_PLAN.md) — tickets, done criteria, edge cases, and risk register.
+- [`UI_DESIGN.md`](./AGENT_EXECUTION_PLAN/UI_DESIGN.md) — interaction and visual constraints.
+- [`CODEX_WORKFLOW_1.md`](./AGENT_EXECUTION_PLAN/CODEX_WORKFLOW_1.md) — the docs-first session and verification procedure.
+
+### The ticket loop: small scope, explicit evidence
+
+Each implementation ticket followed the same loop. This was intentionally the opposite of “vibe coding.”
+
+```mermaid
+flowchart LR
+  A[One ticket + done criterion] --> B[Codex proposes approach\nfor larger tickets]
+  B --> C[Human approves scope]
+  C --> D[Codex implements]
+  D --> E[Human runs command, route,\nor browser flow]
+  E --> F{Done criterion met?}
+  F -- no --> G[Paste raw error or screenshot\nback verbatim]
+  G --> D
+  F -- yes --> H[Commit the ticket]
+  H --> I[Move to the next planned ticket]
+```
+
+In practical terms, that meant:
+
+1. **One ticket per message.** Every ticket included a concrete completion condition, for example: “fresh database → one command → populated dashboard; rerun is idempotent.” Larger tickets first required a short proposed approach.
+2. **Build only that scope.** “While you are at it…” was avoided because opportunistic scope growth is especially hard to audit in long agent sessions.
+3. **Verify the result, do not trust a claim.** We ran tests, exercised endpoints, used the deployed UI, and checked browser screenshots. “It should work now” was not accepted as a completion state.
+4. **Return raw evidence.** Errors and screenshots were fed to Codex verbatim rather than paraphrased. Exact evidence gives an implementation agent a reproducible failure, not a guessed description.
+5. **Commit per ticket.** Every completed unit received a focused commit, providing a reviewable history and a safe recovery point.
+
+When a fix failed repeatedly, the process re-anchored on the frozen contract and the exact failure rather than drifting into new guesses. The project’s ticket history is recorded in [`docs/PHASE3_LOG.md`](./docs/PHASE3_LOG.md), and the test suite preserves the contracts that those tickets established.
+
+### Gates, not vibes
+
+We used explicit go/no-go gates instead of deciding the project was “probably fine.”
+
+| Gate | Evidence required | Why it mattered |
+| --- | --- | --- |
+| **1. Risk spike** | A consented reading recording successfully reached transcription before product polish. | Child speech recognition was the largest technical risk, so it was tested first. |
+| **2. Walking skeleton** | Audio → transcript → structured analysis ran end-to-end on a deployed path. | A complete but plain pipeline is more valuable than polished screens connected to mocks. |
+| **3. Mock-to-live swap** | The UI’s frozen analysis contract was replaced with live output without changing its shape. | The UI could be built safely in parallel, then integrated predictably. |
+| **4. Feature freeze** | No new product surface was added before the demo/submission; only failures and documentation were addressed. | It protected reliability from last-minute scope creep. |
+
+### Concrete decisions Codex accelerated
+
+Codex implemented the code, but the following decisions were made explicit and then verified in code rather than left to improvisation:
+
+- **Three short pipeline calls instead of one opaque endpoint:** browser → `POST /api/upload-url` → direct signed Storage upload → `POST /api/transcribe` → `POST /api/analyze`. This keeps audio out of the API server, stays within serverless limits, and lets the UI show honest progress stages.
+- **Server-side truth boundaries:** analysis loads the actual displayed passage from Postgres instead of trusting text sent by the browser. Confirmation revalidates teacher edits and recomputes final metrics server-side; repeated confirmation is idempotent.
+- **Typed contracts at every AI boundary:** Zod and JSON Schema define the transcript, analysis, confirmation, worksheet, and golden-harness shapes. The React UI renders a typed word-mark array rather than parsing model prose.
+- **Deterministic learning logic outside the model:** passage rotation, step-up eligibility, evidence profiles, group focus, math-item generation, and diagnosis are pure TypeScript functions with fixtures. GPT-5.6 drafts language-sensitive interpretation; it does not decide the adaptive algorithm.
+- **Failure cases designed up front:** signed-upload retry with the captured recording kept in memory, a real RMS microphone meter, RLS-scoped audio folders, an expired-session recovery flow, and guard responses for unusable audio.
+
+Codex also accelerated the Next.js/Supabase implementation, RLS-aware data access, the teacher review flow, seeded demo data, migration scripts, tests, deployment debugging, the golden-audio harness, and these reviewer materials. These claims are bounded: Codex did not replace educational validation, consent decisions, or teacher judgment.
+
+## How GPT-5.6 powers Suno at runtime
+
+GPT-5.6 is used for bounded, schema-constrained tasks. It never has the final say on a child’s placement.
+
+### Reading analysis: align what was read with what was shown
+
+`POST /api/analyze` first loads the passage from the server using the selected `passageId`. It then gives GPT-5.6 two inputs:
+
+1. the exact passage the child was shown; and
+2. Whisper’s `verbose_json` transcript containing text, duration, and word-level start/end timestamps.
+
+The model is instructed to align the spoken transcript against the passage **word by word**. The task is operational rather than open-ended: identify whether every displayed word was correct, substituted, skipped, a hesitation, or unclear; handle repeats and self-corrections; treat a gap greater than three seconds as a hesitation; score decoding rather than accent; and return an ASER-style reading level (`letter`, `word`, `paragraph`, or `story`).
+
+The app does not rely on hidden reasoning or parse a prose explanation. GPT-5.6 must return strict structured JSON:
+
+| Output element | What Suno needs it for |
+| --- | --- |
+| One ordered entry per passage word | The review screen can colour and tap-correct the exact word the teacher heard. |
+| `correct`, `substituted`, `skipped`, `hesitation`, or `unclear` status | The app makes the error taxonomy visible instead of collapsing it into one opaque score. |
+| Optional `heard_as` and confidence | The teacher sees the proposed substitution and where AI uncertainty is higher. |
+| WCPM, accuracy, suggested level, teacher summary, recommended focus | A useful draft for the teacher and the evidence/adaptive layer. |
+
+The server validates the JSON Schema **and** confirms that the returned word sequence exactly matches the server-loaded passage. If that fails, it retries once with the validation error attached. A transcript with more than ten words but under 15% passage accuracy is rejected as a different passage, rather than being falsely turned into a low reading score. The implementation is in [`src/lib/analyze-reading.ts`](./src/lib/analyze-reading.ts), the route is [`src/app/api/analyze/route.ts`](./src/app/api/analyze/route.ts), and the strict result contract is [`src/lib/analysisSchema.ts`](./src/lib/analysisSchema.ts).
+
+### What happens before GPT-5.6 sees an audio result
+
+`whisper-1`, not GPT-5.6, performs speech-to-text. Suno requests word timestamps, then applies a guard layer before any analysis call. It rejects:
+
+- recordings shorter than five seconds;
+- transcripts with fewer than three timestamped words;
+- an implausibly dense transcript above five words per second;
+- the known pattern of a short burst of words at the end of an otherwise quiet recording, which can be a silence-transcription hallucination; and
+- an analysis result that strongly indicates the child read a different passage.
+
+The UI receives a specific, friendly recovery message instead of an invented assessment. This keeps costs down and prevents the model from analysing unusable input. See [`src/lib/transcribe-audio.ts`](./src/lib/transcribe-audio.ts), [`src/lib/transcription-guard.ts`](./src/lib/transcription-guard.ts), and [`src/app/api/transcribe/route.ts`](./src/app/api/transcribe/route.ts).
+
+### Teacher confirmation is the truth boundary
+
+The GPT-5.6 result is stored as an **unconfirmed draft**, never as a final placement. The teacher can correct a word mark or the “heard as” value. On confirmation, Suno validates the indexed correction and rebuilds accuracy, WCPM, level, and placement on the server. Only a confirmed benchmark result can move the child on the classroom board. Practice, diagnostic, and step-up protections are separate deterministic rules.
+
+In short: GPT-5.6 drafts; the teacher confirms; server-side code persists the truth.
+
+### GPT-5.6 for level-bounded practice cards
+
+For `/api/worksheets`, GPT-5.6 returns only `{ title, body, question }` for a requested level and language. The server validates the JSON schema, the level-specific word-count band, and exactly one closing question; it retries once on a failed validation. The result is printable A4 content, not an unbounded chatbot response. See [`src/lib/generate-worksheet.ts`](./src/lib/generate-worksheet.ts).
+
+### Golden set: prompt changes are measured, not felt
+
+The required seven curated recordings are a regression suite: a fluent adult read, adult scripted errors, child reads at different fluency levels, a noisy recording, a near-silent recording, and a wrong-passage recording. An eighth Hindi clip is an optional quality gate. The complete manifest, expected outcomes, and files live in [`sample-data/`](./sample-data/).
+
+`npm.cmd run golden` runs approved fixtures through the real signed-upload, transcription, and analysis boundaries, compares the outcome against the manifest, and removes only its own temporary Storage objects and unconfirmed drafts. `npm.cmd run test:golden` validates the offline harness contract. That makes prompt/model changes testable against known successes, known errors, and known rejection cases—not a subjective “this output feels better” judgment.
+
+## Reproduce the AI and quality checks
+
+```powershell
+# Seed the resettable demo classroom and benchmark passages.
+npm.cmd run seed
+
+# Contract and guard checks (no live audio upload).
+npm.cmd run test:guards
+npm.cmd run test:analysis
+npm.cmd run test:golden
+
+# Controlled end-to-end golden run; requires configured Supabase/OpenAI access.
+npm.cmd run golden
+
+# A direct consented-audio transcription risk check.
+npm.cmd run risk-spike -- "path\to\consented-audio.mp4" --language en
+```
 
 ## Quick start
 
