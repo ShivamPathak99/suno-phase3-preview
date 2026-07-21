@@ -81,3 +81,7 @@
 ## P3-T12 — Teacher feedback UI
 
 - Confirming a reading now returns and displays the teacher-only “What this read tells us” block immediately before the Focus panel. It includes kind this-read evidence, an honest untracked-word row, strengths, and thin-evidence guidance; math remains behind its existing capability path rather than presenting a dead panel.
+
+## P3-T13 — Student timeline model
+
+- Added a pure per-student timeline that derives benchmark-only trend points, a separate practice-activity count, diary entries, focus episodes, and the shared profile snapshot. Practice reads remain visible as activity but cannot affect ladder or trend data.
