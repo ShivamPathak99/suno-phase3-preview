@@ -736,6 +736,7 @@ export async function seedDemoData(supabase: SupabaseClient) {
         is_demo,
         name,
         placement_source: "benchmark",
+        teacher_placement_level: null,
     })),
   );
 

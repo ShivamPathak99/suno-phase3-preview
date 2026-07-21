@@ -14,6 +14,7 @@ export type DashboardStudent = {
   assessmentId: string;
   id: string;
   isNewlyConfirmed: boolean;
+  isTeacherPlaced: boolean;
   lastAssessedAt: string;
   level: ReadingLevel;
   name: string;
@@ -101,6 +102,7 @@ export function getMockClassroom(
           : assessmentId(index),
       id: student.id,
       isNewlyConfirmed,
+      isTeacherPlaced: false,
       lastAssessedAt: isNewlyConfirmed ? mockConfirmationTimestamp : assessmentTimestamp(index),
       level: confirmedLevel,
       name: student.name,
@@ -164,6 +166,10 @@ function ordinal(value: number) {
 }
 
 export function assessmentCaption(student: DashboardStudent) {
+  if (student.isTeacherPlaced) {
+    return "Teacher placed · no reading yet";
+  }
+
   if (student.isNewlyConfirmed) {
     return "Assessed just now · " + ordinal(student.assessmentCount) + " time";
   }

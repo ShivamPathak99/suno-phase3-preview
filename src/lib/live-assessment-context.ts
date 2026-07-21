@@ -1,12 +1,14 @@
 import { analysisSchema, type ReadingAnalysis } from "@/lib/analysisSchema";
 import type { ReadingPurpose } from "@/lib/adaptive/types";
 import type { AssessmentContext, AssessmentPassage, ReadingLevel } from "@/lib/assessment-types";
-import { isPlacementAssessment } from "@/lib/live-classroom";
+import { resolveStudentPlacement } from "@/lib/student-placement";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type StudentRecord = {
   id: string;
   name: string;
+  placement_source: string | null;
+  teacher_placement_level: string | null;
 };
 
 type PassageRecord = {
@@ -18,8 +20,10 @@ type PassageRecord = {
 };
 
 type AssessmentRecord = {
-  analysis_json?: unknown;
+  analysis_json: unknown;
+  created_at: string;
   id: string;
+  level: string | null;
   passage_id: string;
   student_id: string;
 };
@@ -95,7 +99,7 @@ async function loadStudent(studentId: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("students")
-    .select("id, name")
+    .select("id, name, placement_source, teacher_placement_level")
     .eq("id", studentId)
     .maybeSingle<StudentRecord>();
 
@@ -151,29 +155,45 @@ async function draftAttemptNumber(studentId: string) {
 
 async function selectedPassageIdForStudent(studentId: string) {
   const supabase = await createSupabaseServerClient();
-  const { data: confirmedAssessments, error: latestAssessmentError } = await supabase
-    .from("assessments")
-    .select("passage_id, level, analysis_json")
-    .eq("student_id", studentId)
-    .eq("teacher_confirmed", true)
-    .order("created_at", { ascending: false });
+  const [studentResult, assessmentsResult] = await Promise.all([
+    supabase
+      .from("students")
+      .select("id, name, placement_source, teacher_placement_level")
+      .eq("id", studentId)
+      .maybeSingle<StudentRecord>(),
+    supabase
+      .from("assessments")
+      .select("id, student_id, passage_id, level, created_at, analysis_json")
+      .eq("student_id", studentId)
+      .eq("teacher_confirmed", true)
+      .order("created_at", { ascending: false })
+      .returns<AssessmentRecord[]>(),
+  ]);
 
-  if (latestAssessmentError) {
+  if (studentResult.error || assessmentsResult.error) {
     throw new Error("Couldn't load the student's last reading level.");
   }
+  if (!studentResult.data) return null;
 
-  const latestAssessment = (confirmedAssessments ?? []).find((assessment) =>
-    isPlacementAssessment(assessment.analysis_json),
-  );
+  const placement = resolveStudentPlacement({
+    confirmedAssessments: assessmentsResult.data ?? [],
+    student: studentResult.data,
+  });
+  const targetLevel = placement.level ?? "letter";
+  let language: "en" | "hi" = "en";
+  let fallbackPassageId: string | null = null;
 
-  if (latestAssessment?.passage_id) {
-    // Follow the latest teacher-confirmed ladder position, not merely the
-    // prior text. That matters when teacher edits move a child one rung down.
-    if (isReadingLevel(latestAssessment.level)) {
+  if (placement.kind === "benchmark" && placement.assessmentId) {
+    const assessment = (assessmentsResult.data ?? []).find(
+      (candidate) => candidate.id === placement.assessmentId,
+    );
+    fallbackPassageId = assessment?.passage_id ?? null;
+
+    if (fallbackPassageId) {
       const { data: priorPassage, error: priorPassageError } = await supabase
         .from("passages")
         .select("language")
-        .eq("id", latestAssessment.passage_id)
+        .eq("id", fallbackPassageId)
         .maybeSingle<{ language: string }>();
 
       if (priorPassageError) {
@@ -181,34 +201,18 @@ async function selectedPassageIdForStudent(studentId: string) {
       }
 
       if (priorPassage?.language === "en" || priorPassage?.language === "hi") {
-        const { data: levelPassage, error: levelPassageError } = await supabase
-          .from("passages")
-          .select("id")
-          .eq("level", latestAssessment.level)
-          .eq("language", priorPassage.language)
-          .limit(1)
-          .maybeSingle<{ id: string }>();
-
-        if (levelPassageError) {
-          throw new Error("Couldn't load a passage for the student's reading level.");
-        }
-
-        if (levelPassage?.id) {
-          return levelPassage.id;
-        }
+        language = priorPassage.language;
       }
     }
-
-    return latestAssessment.passage_id;
   }
 
-  // A child without a confirmed assessment starts at the first English letter
-  // passage. The dashboard will place them only after teacher confirmation.
+  // A teacher-provisional level is valid for choosing a first passage, but it
+  // remains separate from the benchmark model until a reading is confirmed.
   const { data: starterPassage, error: starterPassageError } = await supabase
     .from("passages")
     .select("id")
-    .eq("level", "letter")
-    .eq("language", "en")
+    .eq("level", targetLevel)
+    .eq("language", language)
     .limit(1)
     .maybeSingle<{ id: string }>();
 
@@ -216,7 +220,7 @@ async function selectedPassageIdForStudent(studentId: string) {
     throw new Error("Couldn't load a starter reading passage.");
   }
 
-  return starterPassage?.id ?? null;
+  return starterPassage?.id ?? fallbackPassageId;
 }
 
 export async function loadLiveAssessmentContext(

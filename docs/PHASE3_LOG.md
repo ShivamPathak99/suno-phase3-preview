@@ -43,3 +43,11 @@
 - Added the deterministic 401 recovery contract to the Phase 3 checks. `npm.cmd run check:all` and the production build pass.
 - Remaining acceptance on the deployed preview: complete one demo recording and, once a real teacher account is provisioned, complete the same flow under that teacher session.
 - Follow-up: audio object paths now include the authenticated user id (`uploads/<user-id>/...`) so the preview Storage policy can grant insert access only to that user's folder. The policy is an operational Storage configuration, not a second Phase 3 application migration.
+
+## P3-T6 — Student API and honest placement resolver
+
+- Added and applied `0003_student_teacher_placement.sql` to the preview project. It stores a teacher’s provisional level independently of assessment evidence.
+- Added RLS-scoped `POST /api/students` and `PATCH /api/students/[studentId]`: validated Latin/Devanagari names, optional grade, duplicate-name signal, 60-child advisory, 120-child cap, rename, archive/restore, and manual level changes.
+- The shared resolver returns a child’s active placement without manufacturing an assessment: an active teacher override is provisional until the next confirmed benchmark, otherwise the latest confirmed benchmark wins, otherwise the child is unassessed. Archived children are excluded from the live board.
+- Benchmark confirmation clears a provisional override; a later manual level change intentionally re-provisionalizes the child (F2-E5). A provisional level is also used to choose the initial reading passage while remaining outside the benchmark model.
+- Added deterministic resolver and API route tests. `npm.cmd run check:all` passes; the production build is pending this deployment checkpoint.

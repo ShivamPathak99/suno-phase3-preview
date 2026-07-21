@@ -95,6 +95,18 @@ function responseForAssessment(
   return NextResponse.json(response);
 }
 
+async function markStudentBenchmarkPlacement(
+  supabase: UserScopedSupabaseClient,
+  studentId: string,
+) {
+  const { error } = await supabase
+    .from("students")
+    .update({ placement_source: "benchmark", teacher_placement_level: null })
+    .eq("id", studentId);
+
+  return error;
+}
+
 function parseStoredAnalysis(value: unknown): StoredAnalysis | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
@@ -188,6 +200,14 @@ export async function POST(
     // A second tap (or a retry after a dropped response) must never create a
     // second assessment or overwrite the teacher's first confirmed decision.
     if (draft.teacher_confirmed) {
+      if (existingStoredAnalysis.purpose === "benchmark") {
+        const placementError = await markStudentBenchmarkPlacement(supabase, draft.student_id);
+        if (placementError) {
+          console.error("Confirmed student placement update failed.", placementError);
+          return jsonError("Couldn't confirm the assessment. Please try again.", 502);
+        }
+      }
+
       return responseForAssessment(
         draft,
         existingStoredAnalysis.analysis,
@@ -329,6 +349,14 @@ export async function POST(
     }
 
     if (updatedDraft) {
+      if (existingStoredAnalysis.purpose === "benchmark") {
+        const placementError = await markStudentBenchmarkPlacement(supabase, updatedDraft.student_id);
+        if (placementError) {
+          console.error("Confirmed student placement update failed.", placementError);
+          return jsonError("Couldn't confirm the assessment. Please try again.", 502);
+        }
+      }
+
       return responseForAssessment(updatedDraft, confirmed.analysis, adaptive);
     }
 
@@ -350,6 +378,14 @@ export async function POST(
       : null;
 
     if (alreadyConfirmed?.teacher_confirmed && alreadyConfirmedStoredAnalysis) {
+      if (alreadyConfirmedStoredAnalysis.purpose === "benchmark") {
+        const placementError = await markStudentBenchmarkPlacement(supabase, alreadyConfirmed.student_id);
+        if (placementError) {
+          console.error("Confirmed student placement update failed.", placementError);
+          return jsonError("Couldn't confirm the assessment. Please try again.", 502);
+        }
+      }
+
       return responseForAssessment(
         alreadyConfirmed,
         alreadyConfirmedStoredAnalysis.analysis,

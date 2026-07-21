@@ -6,6 +6,10 @@ import { needForSkill } from "@/lib/adaptive/selection";
 import { readingSkillCatalog } from "@/lib/adaptive/skills-catalog";
 import type { ReadingLevel } from "@/lib/assessment-types";
 import {
+  isPlacementAssessment,
+  resolveStudentPlacement,
+} from "@/lib/student-placement";
+import {
   type DashboardStudent,
   type MockClassroom,
   type SuggestedGroup,
@@ -15,20 +19,19 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type StudentRecord = {
   id: string;
+  is_archived?: boolean | null;
   name: string;
+  placement_source?: string | null;
+  teacher_placement_level?: string | null;
 };
 
 type ConfirmedAssessmentRecord = {
   analysis_json: unknown;
   created_at: string;
   id: string;
-  level: string;
+  level: string | null;
   student_id: string;
 };
-
-function isReadingLevel(value: string): value is ReadingLevel {
-  return (readingLevels as readonly string[]).includes(value);
-}
 
 function emptyLevelCounts() {
   return {
@@ -39,30 +42,7 @@ function emptyLevelCounts() {
   } as Record<ReadingLevel, number>;
 }
 
-/**
- * Placement is strictly the benchmark model. Older assessment rows predate
- * `_adaptive.purpose`, so missing purpose remains a benchmark for backwards
- * compatibility; any explicit non-benchmark purpose is excluded.
- */
-export function isPlacementAssessment(analysisJson: unknown) {
-  if (typeof analysisJson !== "object" || analysisJson === null || Array.isArray(analysisJson)) {
-    return true;
-  }
-
-  const analysis = analysisJson as { _adaptive?: unknown; v?: unknown };
-
-  if (analysis.v === "math-check.v1") {
-    return false;
-  }
-
-  if (typeof analysis._adaptive !== "object" || analysis._adaptive === null) {
-    return true;
-  }
-
-  const purpose = (analysis._adaptive as { purpose?: unknown }).purpose;
-
-  return purpose === undefined || purpose === "benchmark";
-}
+export { isPlacementAssessment } from "@/lib/student-placement";
 
 export function buildLiveClassroom({
   confirmedAssessments,
@@ -73,48 +53,41 @@ export function buildLiveClassroom({
   newlyConfirmedAssessmentId?: string;
   students: readonly StudentRecord[];
 }): MockClassroom {
-  const latestByStudent = new Map<
-    string,
-    ConfirmedAssessmentRecord & { level: ReadingLevel }
-  >();
   const assessmentCountByStudent = new Map<string, number>();
 
   for (const assessment of confirmedAssessments) {
-    if (!isPlacementAssessment(assessment.analysis_json) || !isReadingLevel(assessment.level)) {
+    if (!isPlacementAssessment(assessment.analysis_json) || assessment.level === null) {
       continue;
     }
-
-    const confirmedAssessment = { ...assessment, level: assessment.level };
 
     assessmentCountByStudent.set(
       assessment.student_id,
       (assessmentCountByStudent.get(assessment.student_id) ?? 0) + 1,
     );
-
-    if (!latestByStudent.has(assessment.student_id)) {
-      latestByStudent.set(assessment.student_id, confirmedAssessment);
-    }
   }
 
   const dashboardStudents: DashboardStudent[] = [];
   const unassessedStudents: UnassessedStudent[] = [];
 
   for (const student of students) {
-    const latestAssessment = latestByStudent.get(student.id);
+    const placement = resolveStudentPlacement({ confirmedAssessments, student });
 
-    if (!latestAssessment) {
+    if (placement.kind === "unassessed") {
       unassessedStudents.push({ id: student.id, name: student.name });
       continue;
     }
 
-    const isNewlyConfirmed = latestAssessment.id === newlyConfirmedAssessmentId;
+    const isNewlyConfirmed =
+      placement.kind === "benchmark" && placement.assessmentId === newlyConfirmedAssessmentId;
     dashboardStudents.push({
-      assessmentCount: assessmentCountByStudent.get(student.id) ?? 1,
-      assessmentId: latestAssessment.id,
+      assessmentCount:
+        placement.kind === "benchmark" ? (assessmentCountByStudent.get(student.id) ?? 1) : 0,
+      assessmentId: placement.assessmentId ?? `teacher-placement:${student.id}`,
       id: student.id,
       isNewlyConfirmed,
-      lastAssessedAt: latestAssessment.created_at,
-      level: latestAssessment.level,
+      isTeacherPlaced: placement.kind === "teacher",
+      lastAssessedAt: placement.occurredAt ?? "",
+      level: placement.level,
       name: student.name,
       trend: isNewlyConfirmed ? "up" : "baseline",
     });
@@ -208,8 +181,9 @@ export async function getLiveClassroom(
   const [studentsResult, assessmentsResult] = await Promise.all([
     supabase
       .from("students")
-      .select("id, name")
+      .select("id, name, is_archived, placement_source, teacher_placement_level")
       .eq("classroom_id", classroomId)
+      .eq("is_archived", false)
       .order("name", { ascending: true }),
     supabase
       .from("assessments")
