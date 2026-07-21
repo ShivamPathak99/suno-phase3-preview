@@ -73,3 +73,7 @@
 
 - A latest confirmed benchmark at 90%+ with no more than one hesitation now selects the next reading level. Teacher-provisional placements and focused practice reads remain ineligible, and story never tries to step beyond the ladder.
 - The assessment page explains that the probe cannot move a child down and offers a deterministic base-level alternative. Server-side confirmation promotes at 80% or above, otherwise keeps the prior confirmed level; the boundary and never-demote property are covered by tests.
+
+## P3-T11 — Teacher feedback summary
+
+- Added the pure feedback summary builder for this-read misses, cumulative skill standing, strengths, thin-evidence guidance, and honest untracked-word counts. It derives only from teacher-confirmed adaptive evidence and the same rebuilt profile used by the practice loop.
