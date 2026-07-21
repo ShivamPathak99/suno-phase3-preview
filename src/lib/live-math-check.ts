@@ -1,5 +1,5 @@
 import { isMathCheckDraft, type MathCheckDraft } from "@/lib/adaptive/math/check-contract";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type MathAssessmentRecord = {
   analysis_json: unknown;
@@ -23,7 +23,7 @@ export async function loadLiveMathCheck(
   studentId: string,
   assessmentId: string,
 ): Promise<LiveMathCheck | null> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const [assessmentResult, studentResult] = await Promise.all([
     supabase
       .from("assessments")

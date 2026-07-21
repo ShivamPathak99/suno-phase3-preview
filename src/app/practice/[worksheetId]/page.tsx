@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { AdaptiveCardPage } from "@/components/adaptive-card-page";
 import { parseStoredAdaptiveWorksheet } from "@/lib/adaptive/card-view";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export default async function PracticeCardPage({ params, searchParams }: Practic
     notFound();
   }
 
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("worksheets")
     .select("content_json")

@@ -6,7 +6,7 @@ import { createMathCheckStartHandler } from "../src/app/api/math/checks/route";
 import { createMathCheckCompletionHandler } from "../src/app/api/math/checks/[assessmentId]/route";
 import { mathInstrumentPassageId, type MathCheckDraft } from "../src/lib/adaptive/math/check-contract";
 import { generateProbeItems } from "../src/lib/adaptive/math/item-generator";
-import { createSupabaseAdminClient } from "../src/lib/supabase/admin";
+import type { UserScopedSupabaseClient } from "../src/lib/supabase/user-scoped";
 
 const studentId = "10000000-0000-4000-8000-000000000001";
 const assessmentId = "40000000-0000-4000-8000-000000000001";
@@ -76,11 +76,11 @@ const client = {
 
     throw new Error(`Unexpected table: ${table}`);
   },
-} as unknown as ReturnType<typeof createSupabaseAdminClient>;
+} as unknown as UserScopedSupabaseClient;
 
 async function main() {
   const start = createMathCheckStartHandler({
-    createAdminClient: () => client,
+    createSupabaseClient: () => client,
     createSeed: () => "route-seed",
     generateItems: generateProbeItems,
   });
@@ -102,7 +102,7 @@ async function main() {
   assert.equal((state.insertedRow?.analysis_json as MathCheckDraft).v, "math-check.v1");
   assert.equal(state.insertedRow?.teacher_confirmed, false);
 
-  const complete = createMathCheckCompletionHandler({ createAdminClient: () => client });
+  const complete = createMathCheckCompletionHandler({ createSupabaseClient: () => client });
   const completeResponse = await complete(
     new NextRequest(`http://localhost/api/math/checks/${assessmentId}`, {
       body: JSON.stringify({

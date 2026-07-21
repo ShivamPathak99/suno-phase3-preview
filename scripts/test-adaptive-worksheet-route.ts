@@ -166,7 +166,7 @@ const legacyWorksheet: WorksheetContent = {
 };
 let legacyAdminCalled = false;
 const legacyHandler = createWorksheetPostHandler({
-  createSupabaseAdminClient: () => {
+  createSupabaseClient: () => {
     legacyAdminCalled = true;
     throw new Error("Legacy worksheet requests must not use Supabase.");
   },
@@ -179,7 +179,7 @@ assert.equal(legacyAdminCalled, false, "Legacy path must remain byte-shape compa
 
 const directFixture = createSupabaseFixture({ mostRecentCardId: "en.digraph.sh.card1" });
 const directHandler = createWorksheetPostHandler({
-  createSupabaseAdminClient: () => directFixture.client,
+  createSupabaseClient: () => directFixture.client,
   generateWorksheet: async () => {
     throw new Error("Adaptive requests must use the curated catalog, never GPT.");
   },
@@ -206,7 +206,7 @@ assert.equal(directFixture.insertedWorksheets.length, 1);
 
 const groupFixture = createSupabaseFixture();
 const groupHandler = createWorksheetPostHandler({
-  createSupabaseAdminClient: () => groupFixture.client,
+  createSupabaseClient: () => groupFixture.client,
   generateWorksheet: async () => {
     throw new Error("Group cards must use the curated catalog, never GPT.");
   },
@@ -236,7 +236,7 @@ const resolvedFixture = createSupabaseFixture({
   ],
 });
 const resolvedHandler = createWorksheetPostHandler({
-  createSupabaseAdminClient: () => resolvedFixture.client,
+  createSupabaseClient: () => resolvedFixture.client,
   generateWorksheet: async () => {
     throw new Error("Adaptive requests must use the curated catalog, never GPT.");
   },
@@ -248,7 +248,7 @@ assert.equal(resolvedResponse.status, 200);
 assert.equal((await resolvedResponse.json()).adaptive.cardId, "en.digraph.sh.card1");
 
 const invalidHandler = createWorksheetPostHandler({
-  createSupabaseAdminClient: () => {
+  createSupabaseClient: () => {
     throw new Error("Invalid focus must be rejected before any database call.");
   },
 });

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  isAuthenticationRequiredError,
+  requireUserScopedSupabase,
+  type UserScopedSupabaseClient,
+} from "@/lib/supabase/user-scoped";
 
 /**
  * F1.2: an open demo sandbox gets a soft per-session cap on the three
@@ -60,50 +64,50 @@ export class SessionRateLimiter {
 
 const openAiSessionRateLimiter = new SessionRateLimiter();
 
+export type OpenAiRouteGuard =
+  | { response: NextResponse; supabase: null }
+  | { response: null; supabase: UserScopedSupabaseClient };
+
 /**
- * Applies the F1.2 session cap after validating the Supabase session. API
- * tenancy moves to user-scoped database clients in P3-T5; this guard only
- * establishes an authenticated caller and blocks unauthenticated HTTP traffic
- * from reaching an OpenAI call.
+ * Applies the F1.2 session cap and returns the same RLS-scoped client that
+ * the route must use for persistence. P3-T5 removes the service key from
+ * normal user traffic entirely.
  */
-export async function guardOpenAiRoute() {
+export async function guardOpenAiRoute(): Promise<OpenAiRouteGuard> {
   try {
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error || !user) {
-      return NextResponse.json(
-        { error: "Signed out — sign back in before continuing." },
-        { status: 401 },
-      );
-    }
-
+    const { supabase, user } = await requireUserScopedSupabase();
     const decision = openAiSessionRateLimiter.consume(user.id);
 
     if (!decision.allowed) {
-      return NextResponse.json(
-        {
-          error: "This session has reached its hourly demo limit. Please try again shortly.",
-          retryAfterSeconds: decision.retryAfterSeconds,
-        },
-        {
-          headers: {
-            "Retry-After": String(decision.retryAfterSeconds),
+      return {
+        response: NextResponse.json(
+          {
+            error: "This session has reached its hourly demo limit. Please try again shortly.",
+            retryAfterSeconds: decision.retryAfterSeconds,
           },
-          status: 429,
-        },
-      );
+          {
+            headers: {
+              "Retry-After": String(decision.retryAfterSeconds),
+            },
+            status: 429,
+          },
+        ),
+        supabase: null,
+      };
     }
 
-    return null;
+    return { response: null, supabase };
   } catch (error) {
-    console.error("OpenAI route session check failed.", error);
-    return NextResponse.json(
-      { error: "Signed out — sign back in before continuing." },
-      { status: 401 },
-    );
+    if (!isAuthenticationRequiredError(error)) {
+      console.error("OpenAI route session check failed.", error);
+    }
+
+    return {
+      response: NextResponse.json(
+        { error: "Signed out — sign back in before continuing." },
+        { status: 401 },
+      ),
+      supabase: null,
+    };
   }
 }

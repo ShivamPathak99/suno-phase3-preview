@@ -19,10 +19,10 @@ function jsonError(error: string, status: number) {
 }
 
 export async function POST(request: NextRequest) {
-  const rateLimitResponse = await guardOpenAiRoute();
+  const guard = await guardOpenAiRoute();
 
-  if (rateLimitResponse) {
-    return rateLimitResponse;
+  if (guard.response) {
+    return guard.response;
   }
 
   let body: TranscribeRequest;

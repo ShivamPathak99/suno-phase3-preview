@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { isMathCheckDraft } from "@/lib/adaptive/math/check-contract";
 import { diagnoseMathResponses } from "@/lib/adaptive/math/diagnosis";
 import { buildReviewedMathResponses, type MathReviewUpdate } from "@/lib/adaptive/math/review";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  isAuthenticationRequiredError,
+  requireUserScopedSupabase,
+  type UserScopedSupabaseClient,
+} from "@/lib/supabase/user-scoped";
 
 export const runtime = "nodejs";
 
@@ -24,6 +28,11 @@ function isUuid(value: unknown): value is string {
 
 function jsonError(error: string, status: number) {
   return NextResponse.json({ error }, { status });
+}
+
+async function createUserScopedClient() {
+  const { supabase } = await requireUserScopedSupabase();
+  return supabase;
 }
 
 function parseReviewInput(value: unknown) {
@@ -53,9 +62,9 @@ function parseReviewInput(value: unknown) {
 }
 
 export function createMathCheckConfirmHandler({
-  createAdminClient = createSupabaseAdminClient,
+  createSupabaseClient = createUserScopedClient,
 }: {
-  createAdminClient?: typeof createSupabaseAdminClient;
+  createSupabaseClient?: () => UserScopedSupabaseClient | Promise<UserScopedSupabaseClient>;
 } = {}) {
   return async function POST(
     request: NextRequest,
@@ -78,7 +87,7 @@ export function createMathCheckConfirmHandler({
     }
 
     try {
-      const supabase = createAdminClient();
+      const supabase = await createSupabaseClient();
       const { data: draft, error: draftError } = await supabase
         .from("assessments")
         .select("id, student_id, analysis_json, teacher_confirmed, created_at")
@@ -143,6 +152,9 @@ export function createMathCheckConfirmHandler({
         diagnosis,
       });
     } catch (error) {
+      if (isAuthenticationRequiredError(error)) {
+        return jsonError("Signed out — sign back in before continuing.", 401);
+      }
       console.error("Math review confirmation route failed.", error);
       return jsonError("Couldn't confirm the math check. Please try again.", 502);
     }

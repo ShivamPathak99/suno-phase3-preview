@@ -10,7 +10,6 @@ import {
 } from "@/lib/adaptive/worksheet";
 import { generateWorksheet } from "@/lib/generate-worksheet";
 import { guardOpenAiRoute } from "@/lib/auth/openai-rate-limit";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { worksheetRequestSchema } from "@/lib/worksheetSchema";
 
 export const runtime = "nodejs";
@@ -38,7 +37,7 @@ type SupabaseClientLike = {
 };
 
 type WorksheetRouteDependencies = {
-  createSupabaseAdminClient: () => unknown;
+  createSupabaseClient: () => unknown | Promise<unknown>;
   generateWorksheet: typeof generateWorksheet;
 };
 
@@ -158,7 +157,9 @@ export function createWorksheetPostHandler(
   overrides: Partial<WorksheetRouteDependencies> = {},
 ) {
   const dependencies: WorksheetRouteDependencies = {
-    createSupabaseAdminClient,
+    createSupabaseClient: () => {
+      throw new Error("A user-scoped Supabase client is required for worksheet persistence.");
+    },
     generateWorksheet,
     ...overrides,
   };
@@ -216,7 +217,7 @@ export function createWorksheetPostHandler(
     }
 
     try {
-      const supabase = dependencies.createSupabaseAdminClient() as SupabaseClientLike;
+      const supabase = (await dependencies.createSupabaseClient()) as SupabaseClientLike;
 
       if (adaptiveRequest.groupStudentIds) {
         if (!adaptiveRequest.focusSkillId) {
@@ -330,14 +331,14 @@ export function createWorksheetPostHandler(
   };
 }
 
-const worksheetPostHandler = createWorksheetPostHandler();
-
 export async function POST(request: NextRequest) {
-  const rateLimitResponse = await guardOpenAiRoute();
+  const guard = await guardOpenAiRoute();
 
-  if (rateLimitResponse) {
-    return rateLimitResponse;
+  if (guard.response) {
+    return guard.response;
   }
 
-  return worksheetPostHandler(request);
+  return createWorksheetPostHandler({
+    createSupabaseClient: () => guard.supabase,
+  })(request);
 }

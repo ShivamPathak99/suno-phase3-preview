@@ -4,11 +4,13 @@ import Link from "next/link";
 import { type MutableRefObject, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { analysisSchema, type ReadingAnalysis } from "@/lib/analysisSchema";
+import { requiresSessionRecovery } from "@/lib/auth/session-recovery";
 import type { AnalyzeResponse, TimestampedTranscript } from "@/lib/assessment-contract";
 import type { AssessDebugMode } from "@/lib/assess-debug";
 import type { AssessmentContext, ReadingLevel } from "@/lib/assessment-types";
-import { uploadAudioFile } from "@/lib/upload-audio";
+import { UploadAuthenticationError, uploadAudioFile } from "@/lib/upload-audio";
 import { PracticeReadBanner } from "@/components/practice-read-banner";
+import { ReauthenticateDialog } from "@/components/reauthenticate-dialog";
 
 type FlowState =
   | "ready"
@@ -19,6 +21,7 @@ type FlowState =
   | "mic-error"
   | "no-microphone-signal"
   | "processing-error"
+  | "signed-out"
   | "unassessable-quiet"
   | "unassessable-too-fast"
   | "unassessable-wrong-passage"
@@ -36,6 +39,7 @@ type AudioContextWindow = Window & {
 type ApiResponse = {
   ok: boolean;
   payload: unknown;
+  status: number;
 };
 
 type AssessFlowProps = {
@@ -386,7 +390,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
         });
         const payload = await response.json().catch(() => null);
 
-        return { ok: response.ok, payload };
+        return { ok: response.ok, payload, status: response.status };
       }),
     [],
   );
@@ -455,6 +459,11 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
       setFlowState("processing");
 
       const isCurrentRun = () => pipelineRunRef.current === runId;
+      const pauseForReauthentication = () => {
+        setRecording(capturedRecording);
+        setNotice("Signed out — sign back in, your recording is safe.");
+        setFlowState("signed-out");
+      };
 
       try {
         setProcessingStep(0);
@@ -471,6 +480,11 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
         });
 
         if (!isCurrentRun()) {
+          return;
+        }
+
+        if (requiresSessionRecovery(transcriptionResponse.status)) {
+          pauseForReauthentication();
           return;
         }
 
@@ -501,6 +515,11 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
           return;
         }
 
+        if (requiresSessionRecovery(analysisResponse.status)) {
+          pauseForReauthentication();
+          return;
+        }
+
         if (isUnassessable(analysisResponse.payload)) {
           setNotice(analysisResponse.payload.reason);
           setFlowState(flowStateForUnassessable(analysisResponse.payload.reason));
@@ -518,6 +537,11 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
         setFlowState("complete");
       } catch (error) {
         if (!isCurrentRun()) {
+          return;
+        }
+
+        if (error instanceof UploadAuthenticationError) {
+          pauseForReauthentication();
           return;
         }
 
@@ -866,6 +890,15 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
     void runAssessment(recording);
   }, [discardRecording, recording, runAssessment]);
 
+  const resumeAfterReauthentication = useCallback(() => {
+    if (!recording) {
+      setFlowState("ready");
+      return;
+    }
+
+    void runAssessment(recording);
+  }, [recording, runAssessment]);
+
   useEffect(
     () => () => {
       cancelPipeline();
@@ -1170,6 +1203,10 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
             detail={notice || undefined}
             title="This is taking too long"
           />
+        ) : null}
+
+        {flowState === "signed-out" ? (
+          <ReauthenticateDialog onAuthenticated={resumeAfterReauthentication} />
         ) : null}
       </section>
     </main>

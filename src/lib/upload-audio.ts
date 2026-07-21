@@ -12,6 +12,13 @@ type UploadUrlFailure = {
   error?: string;
 };
 
+export class UploadAuthenticationError extends Error {
+  constructor() {
+    super("Signed out — sign back in before continuing.");
+    this.name = "UploadAuthenticationError";
+  }
+}
+
 const fallbackContentTypes = {
   ".webm": "audio/webm",
   ".mp4": "audio/mp4",
@@ -70,6 +77,10 @@ async function getUploadUrl(fileName: string, contentType: string, signal?: Abor
     | UploadUrlResponse
     | UploadUrlFailure
     | null;
+
+  if (response.status === 401) {
+    throw new UploadAuthenticationError();
+  }
 
   if (!response.ok || !payload || !("signedUrl" in payload)) {
     const message = payload && "error" in payload ? payload.error : undefined;

@@ -6,7 +6,7 @@ import { createMathCheckConfirmHandler } from "../src/app/api/math/checks/[asses
 import arjunFixture from "../src/lib/adaptive/math/__fixtures__/arjun-diagnosis.json";
 import { completeMathCheck, createMathCheckDraft, type MathCheckDraft } from "../src/lib/adaptive/math/check-contract";
 import type { MathItem } from "../src/lib/adaptive/math/item-generator";
-import { createSupabaseAdminClient } from "../src/lib/supabase/admin";
+import type { UserScopedSupabaseClient } from "../src/lib/supabase/user-scoped";
 
 const assessmentId = "40000000-0000-4000-8000-000000000021";
 const studentId = "10000000-0000-4000-8000-000000000019";
@@ -59,10 +59,10 @@ const client = {
       },
     };
   },
-} as unknown as ReturnType<typeof createSupabaseAdminClient>;
+} as unknown as UserScopedSupabaseClient;
 
 async function main() {
-  const handler = createMathCheckConfirmHandler({ createAdminClient: () => client });
+  const handler = createMathCheckConfirmHandler({ createSupabaseClient: () => client });
   const response = await handler(
     new NextRequest(`http://localhost/api/math/checks/${assessmentId}/confirm`, {
       body: JSON.stringify({

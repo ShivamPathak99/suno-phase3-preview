@@ -2741,6 +2741,11 @@ input:focus-visible {
   }
 }
 
+/* The worksheet print contract scans styles from the C-5 marker onward. */
+.reauthenticate-backdrop {
+  position: fixed;
+}
+
 /* C-5 — print-first worksheet route */
 .worksheet-page {
   min-height: 100vh;
@@ -3438,6 +3443,88 @@ input:focus-visible {
 
 .is-child-view .adaptive-card-content {
   padding-bottom: 28px;
+}
+
+/* P3-T5 — in-place recovery for an expired assessment session. */
+.reauthenticate-backdrop {
+  align-items: center;
+  background: rgba(18, 35, 29, 0.52);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  z-index: 40;
+}
+
+.reauthenticate-dialog {
+  background: var(--card);
+  border: 1px solid #d7e3dc;
+  border-radius: 18px;
+  box-shadow: 0 20px 56px rgba(12, 34, 26, 0.28);
+  max-width: 420px;
+  padding: 28px;
+  width: 100%;
+}
+
+.reauthenticate-dialog h2 {
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: 28px;
+  line-height: 1.1;
+  margin: 4px 0 8px;
+}
+
+.reauthenticate-dialog > p:not(.reauthenticate-kicker):not(.reauthenticate-error) {
+  color: var(--slate);
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.reauthenticate-kicker {
+  color: var(--board);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.reauthenticate-form {
+  display: grid;
+  gap: 13px;
+}
+
+.reauthenticate-form label {
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.reauthenticate-form input {
+  border: 1px solid #b9d1c5;
+  border-radius: 8px;
+  font: inherit;
+  min-height: 42px;
+  padding: 8px 10px;
+}
+
+.reauthenticate-form .primary-action,
+.reauthenticate-demo {
+  justify-content: center;
+  margin: 4px 0 0;
+  width: 100%;
+}
+
+.reauthenticate-divider {
+  border-top: 1px solid #dbe7e1;
+  margin: 20px 0;
+}
+
+.reauthenticate-error {
+  color: #b42318;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 14px 0 0;
 }
 
 @media (max-width: 560px) {

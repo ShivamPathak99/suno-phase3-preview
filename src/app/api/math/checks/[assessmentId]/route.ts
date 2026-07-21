@@ -5,7 +5,11 @@ import {
   isMathCheckDraft,
   type MathCheckAnswer,
 } from "@/lib/adaptive/math/check-contract";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  isAuthenticationRequiredError,
+  requireUserScopedSupabase,
+  type UserScopedSupabaseClient,
+} from "@/lib/supabase/user-scoped";
 
 export const runtime = "nodejs";
 
@@ -22,6 +26,11 @@ function isUuid(value: string): boolean {
 
 function jsonError(error: string, status: number) {
   return NextResponse.json({ error }, { status });
+}
+
+async function createUserScopedClient() {
+  const { supabase } = await requireUserScopedSupabase();
+  return supabase;
 }
 
 function parseCompletionInput(value: unknown) {
@@ -58,9 +67,9 @@ function parseCompletionInput(value: unknown) {
 }
 
 export function createMathCheckCompletionHandler({
-  createAdminClient = createSupabaseAdminClient,
+  createSupabaseClient = createUserScopedClient,
 }: {
-  createAdminClient?: typeof createSupabaseAdminClient;
+  createSupabaseClient?: () => UserScopedSupabaseClient | Promise<UserScopedSupabaseClient>;
 } = {}) {
   return async function POST(
     request: NextRequest,
@@ -83,7 +92,7 @@ export function createMathCheckCompletionHandler({
     }
 
     try {
-      const supabase = createAdminClient();
+      const supabase = await createSupabaseClient();
       const { data: draft, error: draftError } = await supabase
       .from("assessments")
       .select("id, student_id, analysis_json, teacher_confirmed")
@@ -127,6 +136,9 @@ export function createMathCheckCompletionHandler({
 
       return NextResponse.json({ assessmentId: updated?.id ?? assessmentId, readyForReview: true });
     } catch (error) {
+      if (isAuthenticationRequiredError(error)) {
+        return jsonError("Signed out — sign back in before continuing.", 401);
+      }
       console.error("Math check completion route failed.", error);
       return jsonError("Couldn't save the math check. Please try again.", 502);
     }

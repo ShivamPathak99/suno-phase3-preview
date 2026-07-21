@@ -4,7 +4,6 @@ import type { AnalyzeRequest, AnalyzeResponse } from "@/lib/assessment-contract"
 import { analyzeRequestSchema } from "@/lib/assessment-contract";
 import { analyzeReading } from "@/lib/analyze-reading";
 import { guardOpenAiRoute } from "@/lib/auth/openai-rate-limit";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { guardTranscriptionForAnalysis } from "@/lib/transcription-guard";
 
 export const runtime = "nodejs";
@@ -26,10 +25,10 @@ function parseRequest(body: unknown): AnalyzeRequest | null {
 }
 
 export async function POST(request: NextRequest) {
-  const rateLimitResponse = await guardOpenAiRoute();
+  const routeGuard = await guardOpenAiRoute();
 
-  if (rateLimitResponse) {
-    return rateLimitResponse;
+  if (routeGuard.response) {
+    return routeGuard.response;
   }
 
   let body: unknown;
@@ -56,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const supabase = createSupabaseAdminClient();
+    const supabase = routeGuard.supabase;
     const [studentResult, passageResult] = await Promise.all([
       supabase.from("students").select("id").eq("id", input.studentId).maybeSingle(),
       supabase

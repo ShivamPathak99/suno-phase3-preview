@@ -2,7 +2,7 @@ import { analysisSchema, type ReadingAnalysis } from "@/lib/analysisSchema";
 import type { ReadingPurpose } from "@/lib/adaptive/types";
 import type { AssessmentContext, AssessmentPassage, ReadingLevel } from "@/lib/assessment-types";
 import { isPlacementAssessment } from "@/lib/live-classroom";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type StudentRecord = {
   id: string;
@@ -92,7 +92,7 @@ function toAssessmentPassage(record: PassageRecord): AssessmentPassage | null {
 }
 
 async function loadStudent(studentId: string) {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("students")
     .select("id, name")
@@ -107,7 +107,7 @@ async function loadStudent(studentId: string) {
 }
 
 async function loadPassage(passageId: string) {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("passages")
     .select("id, level, language, title, body")
@@ -122,7 +122,7 @@ async function loadPassage(passageId: string) {
 }
 
 async function nextAttemptNumber(studentId: string) {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { count, error } = await supabase
     .from("assessments")
     .select("*", { count: "exact", head: true })
@@ -136,7 +136,7 @@ async function nextAttemptNumber(studentId: string) {
 }
 
 async function draftAttemptNumber(studentId: string) {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { count, error } = await supabase
     .from("assessments")
     .select("*", { count: "exact", head: true })
@@ -150,7 +150,7 @@ async function draftAttemptNumber(studentId: string) {
 }
 
 async function selectedPassageIdForStudent(studentId: string) {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { data: confirmedAssessments, error: latestAssessmentError } = await supabase
     .from("assessments")
     .select("passage_id, level, analysis_json")
@@ -246,7 +246,7 @@ export async function loadLiveDraftAssessment(
   studentId: string,
   assessmentId: string,
 ): Promise<LiveDraftAssessment | null> {
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { data: draft, error } = await supabase
     .from("assessments")
     .select("id, student_id, passage_id, analysis_json")

@@ -11,7 +11,7 @@ import {
   type SuggestedGroup,
   type UnassessedStudent,
 } from "@/lib/mock-dashboard";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type StudentRecord = {
   id: string;
@@ -204,7 +204,7 @@ export async function getLiveClassroom(
     return buildLiveClassroom({ confirmedAssessments: [], students: [] });
   }
 
-  const supabase = createSupabaseAdminClient();
+  const supabase = await createSupabaseServerClient();
   const [studentsResult, assessmentsResult] = await Promise.all([
     supabase
       .from("students")

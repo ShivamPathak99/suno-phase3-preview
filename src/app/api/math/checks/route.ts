@@ -9,7 +9,11 @@ import {
 } from "@/lib/adaptive/math/check-contract";
 import { createMathPracticePlan, storedMathFocus } from "@/lib/adaptive/math/focus";
 import { generateProbeItems } from "@/lib/adaptive/math/item-generator";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  isAuthenticationRequiredError,
+  requireUserScopedSupabase,
+  type UserScopedSupabaseClient,
+} from "@/lib/supabase/user-scoped";
 
 export const runtime = "nodejs";
 
@@ -28,12 +32,17 @@ function jsonError(error: string, status: number) {
   return NextResponse.json({ error }, { status });
 }
 
+async function createUserScopedClient() {
+  const { supabase } = await requireUserScopedSupabase();
+  return supabase;
+}
+
 export function createMathCheckStartHandler({
-  createAdminClient = createSupabaseAdminClient,
+  createSupabaseClient = createUserScopedClient,
   createSeed = randomUUID,
   generateItems = generateProbeItems,
 }: {
-  createAdminClient?: typeof createSupabaseAdminClient;
+  createSupabaseClient?: () => UserScopedSupabaseClient | Promise<UserScopedSupabaseClient>;
   createSeed?: () => string;
   generateItems?: typeof generateProbeItems;
 } = {}) {
@@ -62,7 +71,7 @@ export function createMathCheckStartHandler({
     }
 
     try {
-      const supabase = createAdminClient();
+      const supabase = await createSupabaseClient();
       const [studentResult, instrumentResult] = await Promise.all([
         supabase.from("students").select("id, name").eq("id", studentId).maybeSingle<StudentRecord>(),
         supabase
@@ -141,6 +150,9 @@ export function createMathCheckStartHandler({
         { status: 201 },
       );
     } catch (error) {
+      if (isAuthenticationRequiredError(error)) {
+        return jsonError("Signed out — sign back in before continuing.", 401);
+      }
       console.error("Math check start route failed.", error);
       return jsonError("Couldn't start the math check. Please try again.", 502);
     }

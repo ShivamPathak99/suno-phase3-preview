@@ -34,3 +34,11 @@
 - Added the protected `/api/cron/reset-demo` endpoint and `vercel.json` schedule. The preview default is 02:00 Asia/Kolkata (20:30 UTC); the route requires both a matching `CRON_SECRET` and `SUNO_DEMO_RESET_TARGET=phase3-preview` before it can change demo data.
 - During local smoke verification, a signed-out route exposed that Next 16 does not load a root request guard when the app lives in `src/app`. The guard is now `src/proxy.ts` (the current Next 16 convention), and production-mode checks confirm `/` and deep links redirect to `/login?next=...` while `/login` remains reachable.
 - Remaining manual preview setup: enable Supabase anonymous sign-ins, then set the same random `CRON_SECRET` and `SUNO_DEMO_RESET_TARGET=phase3-preview` in the phase3 preview deployment environment before relying on the live nightly reset.
+
+## P3-T5 — User-scoped data access and safe re-authentication
+
+- Replaced service-role access in interactive API routes and server-rendered classroom, assessment, math, and practice queries with the authenticated user’s SSR Supabase client. The remaining service-role client is confined to the approved maintenance paths (seed/reset/create-teacher).
+- The audio signed-upload URL is now issued through the child’s authenticated/RLS-scoped session rather than the service role.
+- When a session expires during an assessment, the captured recording stays in browser memory. The flow presents “Signed out — sign back in, your recording is safe,” supports either teacher or demo re-authentication in a modal, and resumes the pending upload/assessment after success.
+- Added the deterministic 401 recovery contract to the Phase 3 checks. `npm.cmd run check:all` and the production build pass.
+- Remaining acceptance on the deployed preview: complete one demo recording and, once a real teacher account is provisioned, complete the same flow under that teacher session.

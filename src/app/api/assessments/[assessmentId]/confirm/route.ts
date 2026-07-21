@@ -20,7 +20,10 @@ import {
   type ConfirmAssessmentResponse,
 } from "@/lib/assessment-contract";
 import type { ReadingLevel } from "@/lib/assessment-types";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  requireUserScopedSupabase,
+  type UserScopedSupabaseClient,
+} from "@/lib/supabase/user-scoped";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -151,8 +154,15 @@ export async function POST(
     return jsonError("overrides must be a valid list of word edits.", 400);
   }
 
+  let supabase: UserScopedSupabaseClient;
+
   try {
-    const supabase = createSupabaseAdminClient();
+    ({ supabase } = await requireUserScopedSupabase());
+  } catch {
+    return jsonError("Signed out — sign back in before continuing.", 401);
+  }
+
+  try {
     const { data: draft, error: draftError } = await supabase
       .from("assessments")
       .select("id, student_id, passage_id, transcript_json, analysis_json, teacher_confirmed, created_at")

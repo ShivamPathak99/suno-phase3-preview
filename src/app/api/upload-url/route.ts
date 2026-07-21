@@ -3,7 +3,10 @@ import { extname } from "node:path";
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  requireUserScopedSupabase,
+  type UserScopedSupabaseClient,
+} from "@/lib/supabase/user-scoped";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -66,6 +69,14 @@ function parseUploadRequest(body: UploadUrlRequest): ParsedUploadRequest {
 }
 
 export async function POST(request: NextRequest) {
+  let supabase: UserScopedSupabaseClient;
+
+  try {
+    ({ supabase } = await requireUserScopedSupabase());
+  } catch {
+    return jsonError("Signed out — sign back in before continuing.", 401);
+  }
+
   let body: UploadUrlRequest;
 
   try {
@@ -84,7 +95,6 @@ export async function POST(request: NextRequest) {
   const path = `uploads/${datePrefix}/${randomUUID()}${parsed.extension}`;
 
   try {
-    const supabase = createSupabaseAdminClient();
     const { data, error } = await supabase.storage
       .from(bucketId)
       .createSignedUploadUrl(path);
