@@ -10,6 +10,7 @@ import {
   resolveStudentPlacement,
 } from "@/lib/student-placement";
 import {
+  type ArchivedStudent,
   type DashboardStudent,
   type MockClassroom,
   type SuggestedGroup,
@@ -155,6 +156,7 @@ export function buildLiveClassroom({
   }
 
   return {
+    archivedStudents: [],
     confirmedStudent,
     groupRecommendations,
     groups,
@@ -178,7 +180,7 @@ export async function getLiveClassroom(
   }
 
   const supabase = await createSupabaseServerClient();
-  const [studentsResult, assessmentsResult] = await Promise.all([
+  const [studentsResult, assessmentsResult, archivedStudentsResult] = await Promise.all([
     supabase
       .from("students")
       .select("id, name, is_archived, placement_source, teacher_placement_level")
@@ -190,18 +192,32 @@ export async function getLiveClassroom(
       .select("id, student_id, level, created_at, analysis_json")
       .eq("teacher_confirmed", true)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("students")
+      .select("id, name")
+      .eq("classroom_id", classroomId)
+      .eq("is_archived", true)
+      .order("name", { ascending: true }),
   ]);
 
-  if (studentsResult.error || assessmentsResult.error) {
-    console.error("Classroom dashboard lookup failed.", studentsResult.error ?? assessmentsResult.error);
+  if (studentsResult.error || assessmentsResult.error || archivedStudentsResult.error) {
+    console.error(
+      "Classroom dashboard lookup failed.",
+      studentsResult.error ?? assessmentsResult.error ?? archivedStudentsResult.error,
+    );
     throw new Error("Couldn't load the classroom dashboard.");
   }
 
   const students = (studentsResult.data ?? []) as StudentRecord[];
   const confirmedAssessments = (assessmentsResult.data ?? []) as ConfirmedAssessmentRecord[];
-  return buildLiveClassroom({
+  const classroom = buildLiveClassroom({
     confirmedAssessments,
     newlyConfirmedAssessmentId,
     students,
   });
+
+  return {
+    ...classroom,
+    archivedStudents: (archivedStudentsResult.data ?? []) as ArchivedStudent[],
+  };
 }

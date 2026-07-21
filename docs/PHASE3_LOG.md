@@ -51,3 +51,10 @@
 - The shared resolver returns a child’s active placement without manufacturing an assessment: an active teacher override is provisional until the next confirmed benchmark, otherwise the latest confirmed benchmark wins, otherwise the child is unassessed. Archived children are excluded from the live board.
 - Benchmark confirmation clears a provisional override; a later manual level change intentionally re-provisionalizes the child (F2-E5). A provisional level is also used to choose the initial reading passage while remaining outside the benchmark model.
 - Added deterministic resolver and API route tests. `npm.cmd run check:all` passes; the production build is pending this deployment checkpoint.
+
+## P3-T7 — Student roster UI
+
+- Added the dashboard’s `+ Add child` sheet, with name/grade validation, visible duplicate-name advice that still permits real classmates with the same name, and the optional teacher-estimated starting level.
+- Teacher-provisional children appear in their chosen column with a subtle `Teacher placed` chip; rename-only edits are evidence-neutral, while choosing a level explicitly makes a new provisional override.
+- Added per-child overflow actions, archive confirmation, demo-reset copy, the quiet archived list, and restore. Archive preserves assessment history and every level column retains its existing empty ghost state.
+- Added the P3-T7 UI contract to the Phase 3 suite. `npm.cmd run check:all` passes; manual preview acceptance remains after deployment.

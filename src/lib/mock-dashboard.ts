@@ -32,7 +32,13 @@ export type UnassessedStudent = {
   name: string;
 };
 
+export type ArchivedStudent = {
+  id: string;
+  name: string;
+};
+
 export type MockClassroom = {
+  archivedStudents: ArchivedStudent[];
   confirmedStudent: DashboardStudent | null;
   groupRecommendations: Partial<Record<ReadingLevel, GroupRecommendation>>;
   groups: SuggestedGroup[];
@@ -129,6 +135,7 @@ export function getMockClassroom(
       : [];
 
   return {
+    archivedStudents: [],
     confirmedStudent,
     groupRecommendations: Object.fromEntries(
       groups.map((group) => [

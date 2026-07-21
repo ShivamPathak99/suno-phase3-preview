@@ -30,7 +30,7 @@ export default async function Home({ searchParams }: HomePageProps) {
   // Preserve the explicit B-5 empty-state fixture; all ordinary dashboard
   // routes now reflect the persisted teacher-confirmed assessment records.
   if (singleValue(query.debug) === "empty-student") {
-    return <ClassroomDashboard {...getMockClassroom(undefined, "empty-student")} />;
+    return <ClassroomDashboard {...getMockClassroom(undefined, "empty-student")} isDemoClassroom={false} />;
   }
 
   const currentClassroom = await getCurrentClassroom();
@@ -39,5 +39,5 @@ export default async function Home({ searchParams }: HomePageProps) {
     isUuid(assessmentId) ? assessmentId : undefined,
   );
 
-  return <ClassroomDashboard {...classroom} />;
+  return <ClassroomDashboard {...classroom} isDemoClassroom={currentClassroom?.mode === "demo"} />;
 }
