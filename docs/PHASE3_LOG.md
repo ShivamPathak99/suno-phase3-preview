@@ -58,3 +58,8 @@
 - Teacher-provisional children appear in their chosen column with a subtle `Teacher placed` chip; rename-only edits are evidence-neutral, while choosing a level explicitly makes a new provisional override.
 - Added per-child overflow actions, archive confirmation, demo-reset copy, the quiet archived list, and restore. Archive preserves assessment history and every level column retains its existing empty ghost state.
 - Added the P3-T7 UI contract to the Phase 3 suite. `npm.cmd run check:all` passes; manual preview acceptance remains after deployment.
+
+## P3-T8 — Deterministic benchmark passage selector
+
+- Added the pure, offline `passage-selector.ts`: selection is stable from `studentId:confirmedBenchmarkCount`, filters the last two forms and the 21-day memory window, and never blocks a check when a thin pool requires least-recently-read fallback.
+- Added explicit baseline passage registration, English difficulty-band validation (word count, mean sentence length, and vocabulary tier), and a deterministic test covering refresh stability, post-confirm rotation, fallback, and Hindi language scoping.
