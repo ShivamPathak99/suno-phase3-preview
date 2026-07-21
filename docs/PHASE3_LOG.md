@@ -85,3 +85,7 @@
 ## P3-T13 — Student timeline model
 
 - Added a pure per-student timeline that derives benchmark-only trend points, a separate practice-activity count, diary entries, focus episodes, and the shared profile snapshot. Practice reads remain visible as activity but cannot affect ladder or trend data.
+
+## P3-T14 — Student journey page
+
+- Added `/student/[id]` with designed rich, thin, practice-only, and archived states: benchmark trends, skill map, separate practice activity, and a confirmed-reading diary. Roster names now open the journey page.

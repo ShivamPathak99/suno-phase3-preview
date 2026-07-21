@@ -940,6 +940,22 @@ input:focus-visible {
 .feedback-strengths { margin-top: 10px !important; }
 .feedback-confidence { color: var(--slate); margin-top: 10px !important; }
 
+.student-page { min-height: 100vh; padding: 24px 16px 72px; }
+.student-shell { margin: 0 auto; max-width: 840px; }
+.student-page-header { align-items: center; display: flex; gap: 16px; justify-content: space-between; margin-bottom: 24px; }
+.student-page-header > div { flex: 1; }
+.student-page-header p, .student-page-header h1 { margin: 0; }
+.student-page-header p, .student-panel-kicker { color: var(--slate); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.student-page-header h1, .student-panel h2, .student-empty h2 { font-family: var(--font-display), var(--font-devanagari), sans-serif; font-size: 28px; line-height: 34px; }
+.student-readonly, .student-empty, .student-panel { background: var(--card); border: 1px solid var(--ruling); border-radius: 12px; margin: 16px 0; padding: 18px; }
+.student-readonly { background: #fff9e8; color: #5f4a19; }
+.student-empty p, .student-panel p { color: var(--slate); line-height: 22px; }
+.student-trend-list, .student-skill-list, .student-diary { display: grid; gap: 8px; list-style: none; margin: 14px 0 0; padding: 0; }
+.student-trend-list li, .student-diary li { align-items: center; border-top: 1px solid var(--ruling); display: grid; gap: 8px; grid-template-columns: 1fr auto auto auto; padding-top: 9px; }
+.student-skill-list li { align-items: center; display: flex; justify-content: space-between; }
+.student-skill-list span { background: #f2f8f5; border-radius: 999px; color: #315b4a; font-size: 12px; padding: 3px 8px; }
+@media (max-width: 520px) { .student-trend-list li, .student-diary li { grid-template-columns: 1fr auto; } }
+
 .confirm-passage {
   min-height: 280px;
 }

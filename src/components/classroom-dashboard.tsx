@@ -283,7 +283,7 @@ function StudentCard({
     <article className={"student-card" + (student.isNewlyConfirmed ? " is-slotting-in" : "")}>
       <div className="student-card-copy">
         <div className="student-card-name-row">
-          <h3 title={student.name}>{student.name}</h3>
+          <h3 title={student.name}><Link href={`/student/${student.id}`}>{student.name}</Link></h3>
           {student.isTeacherPlaced ? <span className="teacher-placed-chip">Teacher placed</span> : null}
         </div>
         <p>
@@ -327,7 +327,7 @@ function UnassessedStudentCard({
   return (
     <article className="student-card unassessed-student-card">
       <div className="student-card-copy">
-        <h3 title={student.name}>{student.name}</h3>
+        <h3 title={student.name}><Link href={`/student/${student.id}`}>{student.name}</Link></h3>
         <p>Not assessed yet</p>
       </div>
       <Link aria-label={`Assess now: ${student.name}`} className="unassessed-assess-button" href={`/assess/${student.id}`}>
