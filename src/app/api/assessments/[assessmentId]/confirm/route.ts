@@ -15,6 +15,8 @@ import {
   recomputeConfirmedReadingAnalysis,
 } from "@/lib/assessment-confirmation";
 import { isStepUpAttempt } from "@/lib/adaptive/step-up-probe";
+import { buildStudentProfile } from "@/lib/adaptive/profile";
+import { buildFeedbackSummary, type FeedbackSummary } from "@/lib/analytics/lagging";
 import {
   confirmAssessmentRequestSchema,
   timestampedTranscriptSchema,
@@ -84,6 +86,7 @@ function responseForAssessment(
   assessment: Pick<DraftAssessmentRecord, "id" | "student_id">,
   analysis: ReadingAnalysis,
   adaptive: AdaptiveAssessmentPayload | null = null,
+  feedback?: FeedbackSummary,
 ) {
   const response: ConfirmAssessmentResponse = {
     assessment: {
@@ -98,6 +101,9 @@ function responseForAssessment(
 
   if (adaptive) {
     response.adaptive = adaptive.focus;
+  }
+  if (feedback) {
+    response.feedback = feedback;
   }
 
   return NextResponse.json(response);
@@ -345,6 +351,25 @@ export async function POST(
         input.data.overrides,
       ),
     });
+    const historicalAdaptiveAssessments = (confirmedHistory ?? []).flatMap((record) => {
+      const stored = parseStoredAnalysis(record.analysis_json);
+      return stored?.adaptive ? [stored.adaptive] : [];
+    });
+    const feedbackProfile = buildStudentProfile({
+      asOf: draft.created_at,
+      confirmedReadingCount: (confirmedHistory ?? []).length + 1,
+      events: [...historicalAdaptiveAssessments.flatMap((entry) => entry.evidence), ...adaptive.evidence],
+      studentId: draft.student_id,
+    });
+    const confirmedMisses = confirmed.analysis.words.filter(
+      (word) => word.status === "substituted" || word.status === "skipped" || word.status === "hesitation",
+    ).length;
+    const trackedMisses = adaptive.evidence.filter((event) => event.outcome !== "correct").length;
+    const feedback = buildFeedbackSummary({
+      profile: feedbackProfile,
+      thisAssessmentEvents: adaptive.evidence,
+      untrackedMisses: Math.max(0, confirmedMisses - trackedMisses),
+    });
 
     const { data: updatedDraft, error: updateError } = await supabase
       .from("assessments")
@@ -374,7 +399,7 @@ export async function POST(
         }
       }
 
-      return responseForAssessment(updatedDraft, confirmed.analysis, adaptive);
+      return responseForAssessment(updatedDraft, confirmed.analysis, adaptive, feedback);
     }
 
     // A parallel request may have confirmed the draft immediately before this

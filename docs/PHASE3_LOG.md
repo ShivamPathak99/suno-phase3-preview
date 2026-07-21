@@ -77,3 +77,7 @@
 ## P3-T11 — Teacher feedback summary
 
 - Added the pure feedback summary builder for this-read misses, cumulative skill standing, strengths, thin-evidence guidance, and honest untracked-word counts. It derives only from teacher-confirmed adaptive evidence and the same rebuilt profile used by the practice loop.
+
+## P3-T12 — Teacher feedback UI
+
+- Confirming a reading now returns and displays the teacher-only “What this read tells us” block immediately before the Focus panel. It includes kind this-read evidence, an honest untracked-word row, strengths, and thin-evidence guidance; math remains behind its existing capability path rather than presenting a dead panel.

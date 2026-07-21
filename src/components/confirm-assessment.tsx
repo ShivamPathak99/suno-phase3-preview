@@ -15,6 +15,7 @@ import {
 import { FocusPanel } from "@/components/focus-panel";
 import { PracticeReadBanner } from "@/components/practice-read-banner";
 import type { FocusRecommendation } from "@/lib/adaptive/selection";
+import type { FeedbackSummary } from "@/lib/analytics/lagging";
 import type { ReadingAnalysis } from "@/lib/analysisSchema";
 import type { ConfirmAssessmentResponse } from "@/lib/assessment-contract";
 import type { AssessmentContext, ReadingLevel } from "@/lib/assessment-types";
@@ -178,6 +179,7 @@ export function ConfirmAssessment({
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmationError, setConfirmationError] = useState("");
   const [savedAdaptive, setSavedAdaptive] = useState<FocusRecommendation | undefined>(initialAdaptive);
+  const [savedFeedback, setSavedFeedback] = useState<FeedbackSummary | undefined>();
   const [isConfirmed, setIsConfirmed] = useState(initialAdaptive !== undefined);
 
   const dialogRef = useRef<HTMLElement | null>(null);
@@ -320,6 +322,7 @@ export function ConfirmAssessment({
       }
 
       setSavedAdaptive(payload.adaptive);
+      setSavedFeedback(payload.feedback);
       setIsConfirmed(true);
       setIsConfirming(false);
     } catch (error) {
@@ -564,6 +567,9 @@ export function ConfirmAssessment({
               Re-record
             </Link>
             {isConfirmed && savedAdaptive ? (
+              <FeedbackBlock feedback={savedFeedback} />
+            ) : null}
+            {isConfirmed && savedAdaptive ? (
               <FocusPanel
                 focus={savedAdaptive}
                 passage={context.passage}
@@ -641,5 +647,36 @@ export function ConfirmAssessment({
       ) : null}
 
     </main>
+  );
+}
+
+function FeedbackBlock({ feedback }: { feedback: FeedbackSummary | undefined }) {
+  if (!feedback) return null;
+
+  return (
+    <section className="feedback-summary" aria-labelledby="feedback-summary-title">
+      <p className="feedback-kicker">Confirmed reading evidence</p>
+      <h2 id="feedback-summary-title">What this read tells us</h2>
+      {feedback.thisRead.length > 0 ? (
+        <ul className="feedback-list">
+          {feedback.thisRead.map((entry) => (
+            <li key={entry.skillId}>
+              <strong>{entry.skillName}</strong> — {entry.detail} this read · practising
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>Reading common words confidently in this check.</p>
+      )}
+      {feedback.untrackedMisses > 0 ? (
+        <p>{feedback.untrackedMisses} {feedback.untrackedMisses === 1 ? "miss" : "misses"} on words Suno doesn&apos;t track yet.</p>
+      ) : null}
+      {feedback.strengths.length > 0 ? (
+        <p className="feedback-strengths">
+          Strengths: {feedback.strengths.map((entry) => entry.skillName).join(", ")}.
+        </p>
+      ) : null}
+      {feedback.confidenceNote ? <p className="feedback-confidence">{feedback.confidenceNote}</p> : null}
+    </section>
   );
 }

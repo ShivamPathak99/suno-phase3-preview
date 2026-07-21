@@ -895,6 +895,51 @@ input:focus-visible {
   min-width: 0;
 }
 
+.feedback-summary {
+  background: #f2f8f5;
+  border: 1px solid #b9d7c9;
+  border-radius: 12px;
+  color: #244537;
+  padding: 16px;
+}
+
+.feedback-summary h2,
+.feedback-summary p {
+  margin: 0;
+}
+
+.feedback-summary h2 {
+  font-family: var(--font-display), var(--font-devanagari), sans-serif;
+  font-size: 19px;
+  line-height: 25px;
+}
+
+.feedback-kicker {
+  color: #426b58;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px !important;
+  text-transform: uppercase;
+}
+
+.feedback-list {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0;
+  padding-left: 18px;
+}
+
+.feedback-list li,
+.feedback-strengths,
+.feedback-confidence {
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.feedback-strengths { margin-top: 10px !important; }
+.feedback-confidence { color: var(--slate); margin-top: 10px !important; }
+
 .confirm-passage {
   min-height: 280px;
 }

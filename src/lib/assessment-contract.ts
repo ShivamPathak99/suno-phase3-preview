@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { type ReadingAnalysis, wordStatuses } from "@/lib/analysisSchema";
 import type { FocusRecommendation } from "@/lib/adaptive/selection";
+import type { FeedbackSummary } from "@/lib/analytics/lagging";
 
 export const timestampedWordSchema = z
   .object({
@@ -87,6 +88,7 @@ export type ConfirmAssessmentRequest = z.infer<typeof confirmAssessmentRequestSc
 
 export type ConfirmAssessmentResponse = {
   adaptive?: FocusRecommendation;
+  feedback?: FeedbackSummary;
   assessment: {
     accuracy_pct: number;
     analysis: ReadingAnalysis;
