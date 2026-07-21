@@ -22,6 +22,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <p className="login-support">
           Need an account? Suno is onboarding schools through partners — write to us.
         </p>
+        <p className="login-support"><a href="/why">Why Suno works</a></p>
       </section>
     </main>
   );

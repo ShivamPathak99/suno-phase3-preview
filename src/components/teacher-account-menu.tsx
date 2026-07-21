@@ -51,6 +51,7 @@ export function TeacherAccountMenu() {
       </summary>
       <div className="teacher-account-popover">
         <p>{account.isDemo ? "Demo classroom" : "Signed in"}</p>
+        <a className="quiet-action" href="/why">Why Suno works</a>
         <button className="quiet-action" onClick={() => void signOut()} type="button">
           {account.isDemo ? "Exit demo" : "Sign out"}
         </button>

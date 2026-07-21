@@ -97,3 +97,7 @@
 ## P3-T16 — Methodology info sheets
 
 - Added accessible information sheets beside suggested groups, reading checks, numeracy, and next practice. Each opens concise methodology copy, supports Escape, and links to its matching evidence section.
+
+## P3-T17 — Public evidence page
+
+- Added the public `/why` page with source-chip statistics, accessible chart/table toggles, an explicitly illustrative reading-gap graphic, the teacher-centred loop, guardrail rationale, and a clear in-development numeracy statement.
