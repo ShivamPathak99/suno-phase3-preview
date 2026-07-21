@@ -70,9 +70,12 @@ function parseUploadRequest(body: UploadUrlRequest): ParsedUploadRequest {
 
 export async function POST(request: NextRequest) {
   let supabase: UserScopedSupabaseClient;
+  let userId: string;
 
   try {
-    ({ supabase } = await requireUserScopedSupabase());
+    const scopedClient = await requireUserScopedSupabase();
+    supabase = scopedClient.supabase;
+    userId = scopedClient.user.id;
   } catch {
     return jsonError("Signed out — sign back in before continuing.", 401);
   }
@@ -92,7 +95,9 @@ export async function POST(request: NextRequest) {
   }
 
   const datePrefix = new Date().toISOString().slice(0, 10);
-  const path = `uploads/${datePrefix}/${randomUUID()}${parsed.extension}`;
+  // The storage RLS policy permits a session to insert only into its own
+  // folder. Keep the owner id as a path segment rather than trusting input.
+  const path = `uploads/${userId}/${datePrefix}/${randomUUID()}${parsed.extension}`;
 
   try {
     const { data, error } = await supabase.storage

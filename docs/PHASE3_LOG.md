@@ -42,3 +42,4 @@
 - When a session expires during an assessment, the captured recording stays in browser memory. The flow presents “Signed out — sign back in, your recording is safe,” supports either teacher or demo re-authentication in a modal, and resumes the pending upload/assessment after success.
 - Added the deterministic 401 recovery contract to the Phase 3 checks. `npm.cmd run check:all` and the production build pass.
 - Remaining acceptance on the deployed preview: complete one demo recording and, once a real teacher account is provisioned, complete the same flow under that teacher session.
+- Follow-up: audio object paths now include the authenticated user id (`uploads/<user-id>/...`) so the preview Storage policy can grant insert access only to that user's folder. The policy is an operational Storage configuration, not a second Phase 3 application migration.

@@ -44,4 +44,10 @@ for (const path of userScopedSources) {
   );
 }
 
+assert.match(
+  source("../src/app/api/upload-url/route.ts"),
+  /uploads\/\$\{userId\}\/\$\{datePrefix\}\//,
+  "audio uploads must be placed under the signed-in session's storage folder",
+);
+
 console.log("P3-T5 auth recovery contract passed: mocked 401 preserves the recording and user routes are RLS scoped.");
