@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { adaptivePracticePath } from "@/lib/adaptive/card-view";
+import { InfoSheet } from "@/components/info-sheet";
 import type { FocusRecommendation } from "@/lib/adaptive/selection";
 import { readingSkillCatalog } from "@/lib/adaptive/skills-catalog";
 import type { AssessmentPassage } from "@/lib/assessment-types";
@@ -119,7 +120,7 @@ export function FocusPanel({ focus, passage, studentId, studentName }: FocusPane
     <section className="focus-panel" aria-labelledby="focus-panel-title">
       <div className="focus-panel-heading">
         <p className="focus-panel-kicker">Next practice</p>
-        <h2 id="focus-panel-title">{panelHeading(focus, studentName)}</h2>
+        <h2 id="focus-panel-title">{panelHeading(focus, studentName)} <InfoSheet body="The next practice suggestion comes from teacher-confirmed reading evidence, not an AI guess alone. You can choose another focus or decide not to create a card." href="/why#loop" label="About next practice" title="How focus suggestions work" /></h2>
       </div>
 
       {skill ? (

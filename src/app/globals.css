@@ -967,6 +967,11 @@ input:focus-visible {
 .report-date, .report-footer { color: var(--slate); }
 .report-actions { display: flex; gap: 12px; justify-content: flex-end; }
 .print-report-button { background: var(--board); border: 0; border-radius: 8px; color: white; cursor: pointer; padding: 9px 12px; }
+.info-button { background: transparent; border: 0; color: var(--slate); cursor: pointer; display: inline-grid; font-size: 18px; height: 32px; place-items: center; vertical-align: middle; width: 32px; }
+.info-sheet-layer { inset: 0; position: fixed; z-index: 40; }
+.info-sheet-backdrop { background: rgb(20 36 35 / 45%); border: 0; inset: 0; position: absolute; width: 100%; }
+.info-sheet { background: var(--card); border-radius: 18px 18px 0 0; bottom: 0; box-shadow: 0 -8px 32px rgb(20 36 35 / 18%); left: 0; margin: 0 auto; max-width: 680px; padding: 28px 24px; position: absolute; right: 0; }
+.info-sheet h2 { font-family: var(--font-display), sans-serif; margin: 4px 36px 10px 0; }.info-sheet p { line-height: 23px; }.info-sheet-kicker { color: var(--slate); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }.info-sheet-close { background: transparent; border: 0; cursor: pointer; font-size: 28px; position: absolute; right: 18px; top: 14px; }
 @media print { .report-actions { display: none; } .parent-report { background: white; padding: 0; } .parent-report-sheet { box-shadow: none; max-width: none; padding: 0; } }
 
 .confirm-passage {

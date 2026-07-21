@@ -1,0 +1,3 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+async function main(){const [sheet,dash,assess,math,focus]=await Promise.all([readFile("src/components/info-sheet.tsx","utf8"),readFile("src/components/classroom-dashboard.tsx","utf8"),readFile("src/components/assess-flow.tsx","utf8"),readFile("src/components/math-check-flow.tsx","utf8"),readFile("src/components/focus-panel.tsx","utf8")]);assert.match(sheet,/Escape/);assert.match(sheet,/Read the evidence/);for(const f of [dash,assess,math,focus])assert.match(f,/InfoSheet/);console.log("P3-T16 info sheet contract passed.");}void main();

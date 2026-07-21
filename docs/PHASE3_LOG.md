@@ -93,3 +93,7 @@
 ## P3-T15 — Parent report
 
 - Added a printable, one-page parent snapshot with strengths, one useful focus, simple home practice, and separate benchmark/practice activity. It gracefully renders when evidence is thin and is linked from every student journey.
+
+## P3-T16 — Methodology info sheets
+
+- Added accessible information sheets beside suggested groups, reading checks, numeracy, and next practice. Each opens concise methodology copy, supports Escape, and links to its matching evidence section.

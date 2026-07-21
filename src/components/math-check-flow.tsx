@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 import type { MathItem } from "@/lib/adaptive/math/item-generator";
+import { InfoSheet } from "@/components/info-sheet";
 
 type MathCheckState = "ready" | "starting" | "checking" | "saving" | "complete" | "error";
 
@@ -125,7 +126,7 @@ export function MathCheckFlow({
       <section className="math-check-shell">
         {state === "ready" || state === "starting" || state === "error" ? (
           <section className="math-teacher-card">
-            <p className="math-check-kicker">Numeracy</p>
+            <p className="math-check-kicker">Numeracy <InfoSheet body="Numeracy checks are an actively developed part of Suno. They help a teacher spot patterns in addition and subtraction, then review the result before acting." href="/why#numeracy" label="About numeracy checks" title="Numeracy is in development" /></p>
             <h1>{sourceAssessmentId ? "Run a short math re-check" : "Run a 5-minute math check"}</h1>
             <p>Give the screen to the child. They will see one problem at a time and use the large number pad.</p>
             <button className="primary-action" disabled={state === "starting"} onClick={() => void startCheck()} type="button">

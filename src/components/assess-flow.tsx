@@ -10,6 +10,7 @@ import type { AssessDebugMode } from "@/lib/assess-debug";
 import type { AssessmentContext, ReadingLevel } from "@/lib/assessment-types";
 import { UploadAuthenticationError, uploadAudioFile } from "@/lib/upload-audio";
 import { PracticeReadBanner } from "@/components/practice-read-banner";
+import { InfoSheet } from "@/components/info-sheet";
 import { ReauthenticateDialog } from "@/components/reauthenticate-dialog";
 
 type FlowState =
@@ -939,7 +940,7 @@ export function AssessFlow({ context, debugMode, mode = "live", mockAnalysis }: 
             <span>Class</span>
           </Link>
           <div className="assessment-heading">
-            <p className="assessment-kicker">Reading check</p>
+            <p className="assessment-kicker">Reading check <InfoSheet body="A short, level-matched reading gives the teacher a close look at what the child can do today. Suno drafts the word marks; the teacher always confirms the result." href="/why#guardrails" label="About reading checks" title="Why this reading check" /></p>
             <h1 id="assessment-title">{context.student.name}</h1>
           </div>
           <span className={`level-chip ${levelClassName}`}>

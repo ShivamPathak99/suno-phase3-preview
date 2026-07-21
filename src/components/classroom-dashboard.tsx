@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { TeacherAccountMenu } from "@/components/teacher-account-menu";
+import { InfoSheet } from "@/components/info-sheet";
 import { adaptivePracticePath } from "@/lib/adaptive/card-view";
 import type { GroupRecommendation } from "@/lib/adaptive/grouping";
 import {
@@ -544,7 +545,7 @@ export function ClassroomDashboard({
         </section>
 
         <section className="suggested-groups" aria-labelledby="groups-title">
-          <div className="groups-heading"><p>Teaching at the Right Level</p><h2 id="groups-title">Suggested groups</h2></div>
+          <div className="groups-heading"><p>Teaching at the Right Level</p><h2 id="groups-title">Suggested groups <InfoSheet body="Suno groups children by the reading they are ready to work on, then keeps teacher judgement in the loop. This makes the next small practice step easier to see." href="/why#method" label="About suggested groups" title="Why group by reading" /></h2></div>
           <ul className="groups-grid">
             {groups.map((group) => (
               <li className={`group-card level-${group.level}`} key={group.level}>
