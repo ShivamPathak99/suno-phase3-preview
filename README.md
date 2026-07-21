@@ -1,6 +1,6 @@
 # Suno — teacher-led reading and numeracy support
 
-> **Live demo:** _Add the final Vercel URL here before submitting._
+> **Live demo:** [https://suno-phase3-preview.vercel.app/](https://suno-phase3-preview.vercel.app/)
 >
 > **Judge path:** open the demo URL → choose **Explore the demo classroom** → select a child → **Assess** → **No mic? Try a sample child recording** → review the AI draft → confirm it as the teacher.
 
@@ -93,7 +93,7 @@ sequenceDiagram
 
 Codex was the development-time builder; GPT-5.6 is a runtime product dependency. They had deliberately different jobs. The majority of Suno’s core functionality was built in **one main Codex session**, so the product did not get split across unrelated agent contexts. We switched responsibilities inside that session—pipeline, product/UI, and platform—while keeping the same frozen contracts and commit history.
 
-> **Codex `/feedback` session ID:** this is submitted in the hackathon form from the primary build chat. It is not stored in the public repository because it identifies a private conversation. Do not substitute a made-up ID; use the actual `/feedback` result from the main build session.
+> **Codex `/feedback` session ID (primary build chat):** `019f7a2e-323f-7713-b20c-70061fa7d20e`
 
 The human role was not passive: we supplied product intent, sequencing, real test recordings with consent, UI judgment, deployment configuration, and the acceptance decision. Codex supplied implementation speed. The operating rule was: **humans provide sequence, verification, and judgment; Codex provides code.**
 
