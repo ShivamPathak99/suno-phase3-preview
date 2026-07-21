@@ -1,6 +1,6 @@
 # Suno — Current Capabilities & Technical Guide
 
-**Status:** working local-demo build for a teacher-led early-reading workflow.  
+**Status:** working Phase 3 preview for a teacher-led early-reading workflow.
 **Snapshot:** 21 July 2026.  
 **Audience:** teachers, demo reviewers, and developers continuing the project.
 
@@ -12,13 +12,15 @@ Suno helps a teacher assess a child reading aloud, review the AI’s suggested w
 
 | Area | Available now |
 | --- | --- |
-| Classroom view | Shows 20 seeded demo students across Letter, Word, Paragraph, and Story columns. The latest **teacher-confirmed** assessment determines a child’s placement. |
+| Classroom view | Shows the seeded demo class across Letter, Word, Paragraph, and Story columns. The latest **teacher-confirmed** benchmark determines a child’s placement. |
+| Safe entry and roster | Supports anonymous demo entry, teacher sign-in, classroom-scoped RLS access, and teacher-managed add, rename, archive, and restore actions. |
 | Reading assessment | Loads a level-matched passage, records in the browser, or processes a bundled sample recording through the same live pipeline. |
 | Audio feedback | Shows a real microphone signal indicator, catches no-signal recordings before analysis, enforces a five-second minimum, and handles quiet, too-fast, wrong-passage, upload, and timeout states. |
 | AI-assisted review | Produces a timestamp-aware, word-by-word draft with accuracy, WCPM, suggested level, teacher summary, and recommended focus. |
 | Teacher control | Lets the teacher correct word marks / “heard as” text and then confirm. Final metrics and placement are recalculated on the server. |
 | Classroom grouping | Groups confirmed students by level and links each group to printable reading cards. |
 | Worksheets | Generates an English card for Letter, Word, Paragraph, or Story level, supports regeneration, and prints cleanly from the browser. |
+| Numeracy | Provides deterministic math items, diagnosis, teacher review/confirmation, a focus activity, and a re-check path. |
 | Quality tooling | Includes schema/contract tests, live verification scripts, and a curated golden-audio harness. |
 
 ## Current interface
@@ -171,7 +173,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-Then apply `supabase/migrations/0001_initial_schema.sql` in the Supabase SQL Editor and run:
+Then apply the migrations in order in the Supabase SQL Editor:
+
+1. `supabase/migrations/0001_initial_schema.sql`
+2. `supabase/migrations/0002_classrooms.sql`
+3. `supabase/migrations/0003_student_teacher_placement.sql`
+
+Then run:
 
 ```powershell
 npm.cmd run setup:storage
@@ -203,20 +211,20 @@ npm.cmd run verify:worksheets
 npm.cmd run golden
 ```
 
-`npm.cmd run golden` uses the curated fixtures in `sample-data/golden/`, temporarily uploads only approved test audio, and cleans its matched temporary objects and draft assessments. Use `--include-optional` only when running the Hindi quality gate.
+`npm.cmd run golden` uses the curated fixtures in `sample-data/golden/`, temporarily uploads only approved test audio, and cleans its matched temporary objects and draft assessments. Use `--include-optional` only when running the Hindi quality gate. It intentionally does not automate public-demo browser login, so run it only in an environment where its requests are authorized; the public demo walkthrough instead uses the bundled sample-recording control.
 
 ## Current limits and honest next steps
 
 This is a working demo workflow, not yet a production child-data system.
 
-- There is no authentication, user role system, classroom creation, or multi-school tenancy.
-- The public-read demo audio bucket is not suitable for production child recordings. Production needs private objects, authenticated access, consent records, retention/deletion controls, and RLS policies.
+- Authentication, an anonymous demo door, classroom tenancy, and teacher roster controls are implemented for the preview. Multi-school administration and operational role management are not yet implemented.
+- The public-read demo audio bucket is not suitable for production child recordings. Production needs private objects, formal consent records, retention/deletion controls, and a privacy review beyond the current RLS-scoped application data.
 - The UI currently starts in English. Seed data and API schemas include Hindi, but there is no teacher-facing language or passage picker yet; Hindi should remain gated by the golden-quality check.
 - AI output is advisory. Accent, noise, wrong microphone choice, very short readings, and transcription errors can still require teacher correction.
 - The final ladder rule is intentionally simple: it can hold a child at the attempted level or move one level down; it is not a formally validated adaptive assessment or a full ASER implementation.
 - The review UI currently offers direct correction to correct/skipped/substituted (“heard as”) states; more detailed teacher controls for hesitation and unclear states are a future improvement.
 - Generated worksheets require a live OpenAI connection and are not yet retained as a reusable worksheet bank.
-- There is no `reset-demo` command in the current package scripts. Re-seeding is idempotent for the seeded records, but it does not replace a dedicated demo-data reset tool.
+- The preview has a scoped `reset-demo` maintenance command and protected nightly-reset route. It is for the configured preview project only, never a production project.
 
 ## Key source locations
 

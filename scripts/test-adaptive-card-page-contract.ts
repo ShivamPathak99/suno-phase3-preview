@@ -54,6 +54,25 @@ assert.equal(
 
 const stylesheet = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
 const adaptiveStyles = stylesheet.slice(stylesheet.indexOf("/* P2-T11"));
+
+function cssBlockAt(source: string, blockStart: number) {
+  const openingBrace = source.indexOf("{", blockStart);
+  let depth = 0;
+
+  for (let index = openingBrace; index < source.length; index += 1) {
+    if (source[index] === "{") {
+      depth += 1;
+    }
+    if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(blockStart, index + 1);
+      }
+    }
+  }
+
+  throw new Error("Adaptive card print CSS must have a complete @media print block.");
+}
 for (const requiredToken of [
   ".adaptive-card-screen-chrome",
   ".adaptive-card-target",
@@ -62,8 +81,13 @@ for (const requiredToken of [
 ]) {
   assert.ok(adaptiveStyles.includes(requiredToken), `Adaptive card print CSS must contain ${requiredToken}.`);
 }
+const adaptivePrintStyles = cssBlockAt(
+  adaptiveStyles,
+  adaptiveStyles.indexOf("@media print"),
+);
+
 assert.equal(
-  /position:\s*fixed/u.test(adaptiveStyles),
+  /position:\s*fixed/u.test(adaptivePrintStyles),
   false,
   "Adaptive card print layout must not use fixed positioning.",
 );

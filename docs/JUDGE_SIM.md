@@ -6,7 +6,7 @@ Use the Phase 3 Vercel preview URL. This is a human walkthrough: never use produ
 
 - [ ] Open `/login` in a private window and choose **Explore the demo classroom**.
 - [ ] Confirm the populated class board appears.
-- [ ] Start **Take the tour** from the login screen or account menu.
+- [ ] Start **Take the tour** from the signed-in account menu.
 - [ ] Check that Escape and Skip leave the interface usable, and that a missing target does not trap the tour.
 
 ## Teacher loop
