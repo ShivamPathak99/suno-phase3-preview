@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { TourLaunchButton } from "@/components/tour-launch-button";
 
 type AccountLabel = {
   isDemo: boolean;
@@ -51,6 +52,7 @@ export function TeacherAccountMenu() {
       </summary>
       <div className="teacher-account-popover">
         <p>{account.isDemo ? "Demo classroom" : "Signed in"}</p>
+        <TourLaunchButton />
         <a className="quiet-action" href="/why">Why Suno works</a>
         <button className="quiet-action" onClick={() => void signOut()} type="button">
           {account.isDemo ? "Exit demo" : "Sign out"}

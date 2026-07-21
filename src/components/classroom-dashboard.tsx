@@ -487,14 +487,14 @@ export function ClassroomDashboard({
           </div>
           <div className="dashboard-header-actions">
             <button className="dashboard-add-action" onClick={openAddChild} type="button">+ Add child</button>
-            <Link className="primary-action dashboard-assess-action" href={`/assess/${(unassessedStudents[0] ?? students[0]).id}`}>
+            <Link className="primary-action dashboard-assess-action" data-tour="assess-button" href={`/assess/${(unassessedStudents[0] ?? students[0]).id}`}>
               Assess a child
             </Link>
             <TeacherAccountMenu />
           </div>
         </header>
 
-        <nav aria-label="Reading levels" className="level-ladder">
+        <nav aria-label="Reading levels" className="level-ladder" data-tour="ladder">
           {levels.map((level) => (
             <a aria-label={`${levelLabels[level]} — ${childCountLabel(levelCounts[level])}`} className={`ladder-chip level-${level}`} href={`#level-${level}`} key={level}>
               <span aria-hidden="true" className="ladder-icon"><LevelIcon level={level} /></span>
@@ -544,7 +544,7 @@ export function ClassroomDashboard({
           })}
         </section>
 
-        <section className="suggested-groups" aria-labelledby="groups-title">
+        <section className="suggested-groups" aria-labelledby="groups-title" data-tour="groups">
           <div className="groups-heading"><p>Teaching at the Right Level</p><h2 id="groups-title">Suggested groups <InfoSheet body="Suno groups children by the reading they are ready to work on, then keeps teacher judgement in the loop. This makes the next small practice step easier to see." href="/why#method" label="About suggested groups" title="Why group by reading" /></h2></div>
           <ul className="groups-grid">
             {groups.map((group) => (

@@ -1,4 +1,5 @@
 import { DemoLoginButton } from "@/components/demo-login-button";
+import { TourLaunchButton } from "@/components/tour-launch-button";
 import { LoginForm } from "@/components/login-form";
 import { safeNextPath } from "@/lib/auth/redirects";
 
@@ -19,6 +20,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <LoginForm nextPath={nextPath} />
         <div className="login-divider" role="presentation" />
         <DemoLoginButton nextPath={nextPath} />
+        <TourLaunchButton />
         <p className="login-support">
           Need an account? Suno is onboarding schools through partners — write to us.
         </p>

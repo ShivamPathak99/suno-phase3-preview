@@ -419,7 +419,7 @@ export function ConfirmAssessment({
 
         <div className="confirm-layout">
           <section className="confirm-passage-column" aria-labelledby="marked-passage-title">
-            <article className="ruled-passage confirm-passage" lang={context.passage.language}>
+            <article className="ruled-passage confirm-passage" data-tour="passage-card" lang={context.passage.language}>
               <p className="passage-title" id="marked-passage-title">
                 {context.passage.title} · Tap a word to review it
               </p>
