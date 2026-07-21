@@ -13,3 +13,10 @@
 - P3-T0 was accepted. Added the single sanctioned migration, `0002_classrooms.sql`: classrooms plus student tenancy/archive/placement fields, and an owner-or-demo RLS policy for every scoped table.
 - Worksheets retain their established `content_json.studentId` tenancy reference. Individual and `group:<student-id>:...` cards both chain through a classroom; unlinked legacy rows are denied to browser roles.
 - Added an offline scratch-policy truth-table test and a transaction-rollback SQL harness for a disposable Supabase database. The Node policy suite is part of `check:all`.
+
+## P3-T2 — Demo seed, reset, and benchmark pool
+
+- Seed now creates one `is_demo=true` classroom and attaches every deterministic demo child to it. Reset removes only that classroom chain, including demo-linked worksheets, before reseeding.
+- Added three English baseline forms per reading level. The realistic demo text has explicit `demo_placeholder` calibration metadata and needs human calibration before a pilot.
+- Seeded dated confirmed history across the F6.2 four-to-eight-week window: Chitra's benchmark promotion, Maya's completed focus episode, and Arjun's resolved dropped-carry math arc.
+- Added the P3-T2 seed/idempotence test to `test:phase3`. Migration `0002` was then applied to the configured preview project; `seed` completed with 20 demo students, 19 passages, and 27 deterministic assessments. A reset dry run correctly scopes all 30 current demo assessments and leaves non-demo rows untouched.

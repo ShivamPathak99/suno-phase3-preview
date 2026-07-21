@@ -3,14 +3,16 @@ import { fileURLToPath } from "node:url";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { worksheetStudentIds } from "../src/lib/authz/classroom-policy";
 import {
   createDemoSupabaseAdminClient,
   demoAssessmentIds,
+  demoClassroomId,
   demoStudentIds,
   seedDemoData,
 } from "./seed";
 
-export const previewResetConfirmation = "phase2-preview";
+export const previewResetConfirmation = "phase3-preview";
 
 type DemoResetOptions = {
   dryRun: boolean;
@@ -66,8 +68,8 @@ function assertNoProtectedSeedCollisions(
 }
 
 /**
- * Restores only the demo students and assessments. The schema has no demo
- * marker on worksheets, so this deliberately leaves every worksheet intact.
+ * Restores only the demo classroom chain. Worksheet ownership is carried by
+ * content_json.studentId, so teacher-owned cards are never included in a reset.
  */
 export async function resetDemoData(
   supabase: SupabaseClient,
@@ -77,17 +79,19 @@ export async function resetDemoData(
     { data: protectedStudentRows, error: protectedStudentsError },
     { data: protectedAssessmentRows, error: protectedAssessmentsError },
     { data: demoStudentRows, error: demoStudentsError },
+    { data: worksheetRows, error: worksheetsError },
   ] = await Promise.all([
     supabase.from("students").select("id, is_demo").in("id", demoStudentIds),
     supabase
       .from("assessments")
       .select("id, student_id")
       .in("id", demoAssessmentIds),
-    supabase.from("students").select("id").eq("is_demo", true),
+    supabase.from("students").select("id").eq("classroom_id", demoClassroomId),
+    supabase.from("worksheets").select("id, content_json"),
   ]);
 
-  if (protectedStudentsError || protectedAssessmentsError || demoStudentsError) {
-    throw protectedStudentsError ?? protectedAssessmentsError ?? demoStudentsError;
+  if (protectedStudentsError || protectedAssessmentsError || demoStudentsError || worksheetsError) {
+    throw protectedStudentsError ?? protectedAssessmentsError ?? demoStudentsError ?? worksheetsError;
   }
 
   assertNoProtectedSeedCollisions(
@@ -96,6 +100,14 @@ export async function resetDemoData(
   );
 
   const currentDemoStudentIds = (demoStudentRows ?? []).map((student) => student.id);
+  const currentDemoStudentIdSet = new Set([...demoStudentIds, ...currentDemoStudentIds]);
+  const demoWorksheetIds = (worksheetRows ?? [])
+    .filter((worksheet) =>
+      worksheetStudentIds(worksheet.content_json).some((studentId) =>
+        currentDemoStudentIdSet.has(studentId),
+      ),
+    )
+    .map((worksheet) => worksheet.id);
   let assessmentCount = 0;
 
   if (currentDemoStudentIds.length > 0) {
@@ -139,6 +151,17 @@ export async function resetDemoData(
     }
   }
 
+  if (demoWorksheetIds.length > 0) {
+    const { error: deleteWorksheetsError } = await supabase
+      .from("worksheets")
+      .delete()
+      .in("id", demoWorksheetIds);
+
+    if (deleteWorksheetsError) {
+      throw deleteWorksheetsError;
+    }
+  }
+
   await seedDemoData(supabase);
 
   return {
@@ -161,7 +184,7 @@ async function main() {
 
   if (!options.dryRun && process.env.SUNO_DEMO_RESET_TARGET !== previewResetConfirmation) {
     throw new Error(
-      `Set SUNO_DEMO_RESET_TARGET=${previewResetConfirmation} before resetting a Phase 2 preview database.`,
+      `Set SUNO_DEMO_RESET_TARGET=${previewResetConfirmation} before resetting the Phase 3 preview database.`,
     );
   }
 
@@ -169,7 +192,7 @@ async function main() {
 
   if (result.dryRun) {
     console.log(
-      `Dry run: would replace ${result.studentCount} demo students and ${result.assessmentCount} assessments; non-demo rows and all worksheets stay untouched.`,
+      `Dry run: would replace ${result.studentCount} demo students and ${result.assessmentCount} assessments; non-demo rows stay untouched.`,
     );
     return;
   }

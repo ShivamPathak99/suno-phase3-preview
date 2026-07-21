@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { demoStudentIds } from "./seed";
+import { demoAssessmentIds, demoPassageIds, demoStudentIds } from "./seed";
 import { resetDemoData } from "./reset-demo";
 
 type Call = {
@@ -30,7 +30,7 @@ function createFixtureClient({ protectedDemoId = false } = {}) {
         select(columns: string, options?: { count?: string; head?: boolean }) {
           calls.push({ action: "select", table });
 
-          return {
+          const query = {
             eq(column: string, values: unknown) {
               calls.push({ action: "eq", column, table, values });
 
@@ -38,7 +38,7 @@ function createFixtureClient({ protectedDemoId = false } = {}) {
                 return Promise.resolve({ data: [{ id: demoStudentIds[0] }], error: null });
               }
 
-              return Promise.resolve({ count: 20, data: null, error: null });
+              return Promise.resolve({ count: demoStudentIds.length, data: null, error: null });
             },
             in(column: string, values: unknown) {
               calls.push({ action: "in", column, table, values });
@@ -61,16 +61,34 @@ function createFixtureClient({ protectedDemoId = false } = {}) {
               }
 
               if (table === "passages") {
-                return Promise.resolve({ count: 11, data: null, error: null });
+                return Promise.resolve({ count: demoPassageIds.length, data: null, error: null });
               }
 
               if (table === "assessments" && columns === "*") {
-                return Promise.resolve({ count: 24, data: null, error: null });
+                return Promise.resolve({ count: demoAssessmentIds.length, data: null, error: null });
               }
 
-              return Promise.resolve({ count: 20, data: null, error: null });
+              return Promise.resolve({ count: demoStudentIds.length, data: null, error: null });
+            },
+            then<TResult1 = unknown, TResult2 = never>(
+              onfulfilled?: ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null,
+              onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+            ) {
+              const directResult =
+                table === "worksheets" && columns === "id, content_json"
+                  ? {
+                      data: [
+                        { content_json: { studentId: demoStudentIds[0] }, id: "demo-worksheet" },
+                        { content_json: { studentId: "teacher-student" }, id: "teacher-worksheet" },
+                      ],
+                      error: null,
+                    }
+                  : { data: null, error: null };
+              return Promise.resolve(directResult).then(onfulfilled, onrejected);
             },
           };
+
+          return query;
         },
         upsert() {
           calls.push({ action: "upsert", table });
@@ -107,6 +125,10 @@ async function main() {
 
   assert.deepEqual(assessmentDelete?.values, [demoStudentIds[0]]);
   assert.deepEqual(studentDelete?.values, [demoStudentIds[0]]);
+  const worksheetDelete = resetFixture.calls.find(
+    (call) => call.action === "in" && call.table === "worksheets" && call.column === "id",
+  );
+  assert.deepEqual(worksheetDelete?.values, ["demo-worksheet"]);
   assert.ok(
     resetFixture.calls.some((call) => call.action === "upsert" && call.table === "students"),
     "A reset must restore the deterministic demo students after deleting them.",

@@ -10,7 +10,16 @@ import {
 } from "../src/lib/adaptive/card-catalog";
 import { createAdaptiveWorksheetContent } from "../src/lib/adaptive/worksheet";
 import { validateAdaptiveCard } from "../src/lib/adaptive/validation";
-import { mathInstrumentPassageId } from "../src/lib/adaptive/math/check-contract";
+import {
+  completeMathCheck,
+  createMathCheckDraft,
+  mathInstrumentPassageId,
+} from "../src/lib/adaptive/math/check-contract";
+import { diagnoseMathResponses } from "../src/lib/adaptive/math/diagnosis";
+import { createMathPracticePlan } from "../src/lib/adaptive/math/focus";
+import type { MathItem } from "../src/lib/adaptive/math/item-generator";
+import arjunMathFixture from "../src/lib/adaptive/math/__fixtures__/arjun-diagnosis.json";
+import { validateEnglishBenchmarkPool } from "../src/lib/benchmark-passage-pool";
 
 type Level = "letter" | "word" | "paragraph" | "story";
 type Language = "en" | "hi";
@@ -38,6 +47,16 @@ type Student = {
   is_demo: boolean;
   level: Level;
 };
+
+export const demoClassroom = {
+  grade: "3",
+  id: "50000000-0000-4000-8000-000000000001",
+  is_demo: true,
+  name: "Suno demo classroom",
+  teacher_id: null,
+} as const;
+
+export const demoClassroomId = demoClassroom.id;
 
 type AnalysisWord = {
   passage_word: string;
@@ -116,6 +135,62 @@ const passages: Passage[] = [
     body: "On a rainy morning, Meena carried her lunch box to school. At break time, she could not find it. She looked under her desk. A friend saw the box by the shoe rack. Meena thanked her friend and shared a banana. Then they hurried back to class before the bell rang.",
   },
   {
+    id: "20000000-0000-4000-8000-000000000012",
+    level: "letter",
+    language: "en",
+    title: "Letter Board",
+    body: "A E I O\nB C D F\nG H J K\nL M N P",
+  },
+  {
+    id: "20000000-0000-4000-8000-000000000013",
+    level: "letter",
+    language: "en",
+    title: "Sound Letters",
+    body: "S T R N\nC P B D\nM F G H\nV W X Y",
+  },
+  {
+    id: "20000000-0000-4000-8000-000000000014",
+    level: "word",
+    language: "en",
+    title: "Things We See",
+    body: "bag\ncap\nfan\nhen\nmap\npen\nvan\nshop\nclock\nbrush\nplate\nstone\nriver\ntrain\nflower\nteacher\ncrayon\nbottle\nbanana\nblanket",
+  },
+  {
+    id: "20000000-0000-4000-8000-000000000015",
+    level: "word",
+    language: "en",
+    title: "Around School",
+    body: "gate\nroad\npark\nsoap\nleaf\nseed\nbell\ndesk\nblackboard\nnotebook\nslipper\ncorner\nmonkey\nrainbow\nstation\nladder\ncountry\nfootball\numbrella\ncalendar",
+  },
+  {
+    id: "20000000-0000-4000-8000-000000000016",
+    level: "paragraph",
+    language: "en",
+    title: "The Red Kite",
+    body: "Ravi takes a red kite to the field after school. His sister holds the string while he runs. A soft wind lifts the kite above the trees. Ravi smiles and waves at it.",
+  },
+  {
+    id: "20000000-0000-4000-8000-000000000017",
+    level: "paragraph",
+    language: "en",
+    title: "Morning Milk",
+    body: "Before class, Anya helps her grandmother pour milk into two cups. They add a little sugar and stir it slowly. Anya puts the cups on a tray. Then she walks carefully to the table.",
+  },
+  {
+    id: "20000000-0000-4000-8000-000000000018",
+    level: "story",
+    language: "en",
+    title: "The Lost Eraser",
+    body: "During drawing time, Imran could not find his blue eraser. He checked his pencil box, his desk, and the floor. His friend Tara noticed a small blue shape near the window. It was the eraser, tucked beside a plant pot. Imran thanked Tara and finished his picture of a bus. When the teacher displayed the drawings, both friends stood close to look at them.",
+  },
+  {
+    id: "20000000-0000-4000-8000-000000000019",
+    level: "story",
+    language: "en",
+    title: "Market Morning",
+    body: "On Saturday, Neel went to the market with his father. They bought tomatoes, potatoes, and a bunch of green leaves. At one stall, Neel chose three ripe mangoes for his family. The shopkeeper wrapped them in paper and placed them in a cloth bag. At home, Neel washed the mangoes and put them in a bowl. His little sister clapped because dessert was ready.",
+  },
+  {
     id: "20000000-0000-4000-8000-000000000008",
     level: "story",
     language: "hi",
@@ -136,7 +211,7 @@ const mathInstrumentPassage: Passage = {
 const students: Student[] = [
   ["Aarti", "letter"],
   ["Babu", "letter"],
-  ["Chitra", "letter"],
+  ["Chitra", "word"],
   ["Deepak", "letter"],
   ["Farah", "letter"],
   ["Gopal", "word"],
@@ -153,7 +228,7 @@ const students: Student[] = [
   ["Uma", "story"],
   ["Varun", "story"],
   ["Zoya", "story"],
-  ["Aarav", "story"],
+  ["Arjun", "story"],
 ].map(([name, level], index) => ({
   id: `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
   name,
@@ -196,8 +271,22 @@ const mayaPracticeWorksheetIds = [
   "40000000-0000-4000-8000-000000000001",
   "40000000-0000-4000-8000-000000000002",
 ] as const;
+export const demoPassageIds = [
+  ...passages.map((passage) => passage.id),
+  ...mayaPracticePassageIds,
+  mathInstrumentPassageId,
+];
+const chitraPromotionAssessmentId = "30000000-0000-4000-8000-000000000025";
+const arjunMathDiagnosticAssessmentId = "30000000-0000-4000-8000-000000000026";
+const arjunMathRecheckAssessmentId = "30000000-0000-4000-8000-000000000027";
 
-demoAssessmentIds.push(...mayaPracticeAssessmentIds, ...mayaBaselineAssessmentIds);
+demoAssessmentIds.push(
+  ...mayaPracticeAssessmentIds,
+  ...mayaBaselineAssessmentIds,
+  chitraPromotionAssessmentId,
+  arjunMathDiagnosticAssessmentId,
+  arjunMathRecheckAssessmentId,
+);
 
 const levelProfiles: Record<
   Level,
@@ -310,7 +399,7 @@ export function mayaPrerequisiteHistory(): AdaptiveAssessmentPayload[] {
         automaticityCredit: 1,
         directness: 1 as const,
         distinctWordKey: `${skillId}.demo.${assessmentIndex}.${wordIndex}`,
-        occurredAt: `2026-07-${String(17 + assessmentIndex).padStart(2, "0")}T08:00:00.000Z`,
+        occurredAt: `2026-06-${String(11 + assessmentIndex * 7).padStart(2, "0")}T08:00:00.000Z`,
         outcome: "correct" as const,
         purpose: "benchmark" as const,
         skillId,
@@ -419,7 +508,7 @@ export function createMayaDemoLoop(): SeededPracticeReadback[] {
       adaptive: firstAdaptive,
       analysis: practiceAnalysis(firstCard, firstOutcomes),
       card: firstCard,
-      createdAt: "2026-07-19T09:00:00.000Z",
+      createdAt: "2026-07-02T09:00:00.000Z",
       id: mayaPracticeAssessmentIds[0],
       passageId: mayaPracticePassageIds[0],
       worksheetId: mayaPracticeWorksheetIds[0],
@@ -428,10 +517,119 @@ export function createMayaDemoLoop(): SeededPracticeReadback[] {
       adaptive: secondAdaptive,
       analysis: practiceAnalysis(secondCard, secondOutcomes),
       card: secondCard,
-      createdAt: "2026-07-20T09:00:00.000Z",
+      createdAt: "2026-07-09T09:00:00.000Z",
       id: mayaPracticeAssessmentIds[1],
       passageId: mayaPracticePassageIds[1],
       worksheetId: mayaPracticeWorksheetIds[1],
+    },
+  ];
+}
+
+function requiredArjunStudent() {
+  const arjun = students.find((student) => student.name === "Arjun");
+
+  if (!arjun) {
+    throw new Error("The Phase 3 demo needs Arjun for the seeded math history.");
+  }
+
+  return arjun;
+}
+
+/** Builds a confirmed diagnostic → successful re-check arc for the analytics demo. */
+function createArjunMathHistory() {
+  const arjun = requiredArjunStudent();
+  const diagnosticItems = arjunMathFixture.responses.map((response) => response.item) as MathItem[];
+  const diagnosticAnswers = arjunMathFixture.responses.map((response) => ({
+    answer: response.answer,
+    itemId: response.item.id,
+  }));
+  const diagnosticDraft = completeMathCheck(
+    createMathCheckDraft({ items: diagnosticItems, seed: "seeded-arjun-diagnostic" }),
+    { answers: diagnosticAnswers, elapsedSec: 42 },
+  );
+  const diagnostic = diagnoseMathResponses({
+    assessmentId: arjunMathDiagnosticAssessmentId,
+    occurredAt: "2026-06-20T09:00:00.000Z",
+    purpose: "diagnostic",
+    responses: arjunMathFixture.responses as Array<{ answer: number; item: MathItem }>,
+    studentId: arjun.id,
+  });
+
+  if (!diagnostic.recommendation) {
+    throw new Error("Arjun's seeded diagnostic must produce a math focus.");
+  }
+
+  const recheckItems = createMathPracticePlan({
+    focusSkillId: diagnostic.recommendation.focusSkillId,
+    sourceAssessmentId: arjunMathDiagnosticAssessmentId,
+  }).recheckItems;
+  const recheckDraft = completeMathCheck(
+    createMathCheckDraft({
+      items: recheckItems,
+      purpose: "practice_check",
+      seed: "seeded-arjun-recheck",
+    }),
+    {
+      answers: recheckItems.map((item) => ({ answer: item.answer, itemId: item.id })),
+      elapsedSec: 36,
+    },
+  );
+  const recheck = diagnoseMathResponses({
+    assessmentId: arjunMathRecheckAssessmentId,
+    occurredAt: "2026-07-12T09:00:00.000Z",
+    purpose: "practice_check",
+    responses: recheckItems.map((item) => ({ answer: item.answer, item })),
+    studentId: arjun.id,
+  });
+
+  return [
+    {
+      accuracy: 0,
+      analysis_json: {
+        ...diagnosticDraft,
+        _adaptive: {
+          ...diagnosticDraft._adaptive,
+          evidence: diagnostic.evidence,
+          mathDiagnosis: {
+            bugs: diagnostic.bugs,
+            recommendation: diagnostic.recommendation,
+            skillStates: diagnostic.skillStates,
+          },
+        },
+      },
+      audio_url: null,
+      created_at: "2026-06-20T09:00:00.000Z",
+      id: arjunMathDiagnosticAssessmentId,
+      level: null,
+      passage_id: mathInstrumentPassageId,
+      student_id: arjun.id,
+      teacher_confirmed: true,
+      transcript_json: null,
+      wcpm: null,
+    },
+    {
+      accuracy: 100,
+      analysis_json: {
+        ...recheckDraft,
+        _adaptive: {
+          ...recheckDraft._adaptive,
+          evidence: recheck.evidence,
+          mathDiagnosis: {
+            bugs: recheck.bugs,
+            recommendation: recheck.recommendation ?? null,
+            skillStates: recheck.skillStates,
+          },
+        },
+      },
+      audio_url: null,
+      created_at: "2026-07-12T09:00:00.000Z",
+      id: arjunMathRecheckAssessmentId,
+      level: null,
+      passage_id: mathInstrumentPassageId,
+      student_id: arjun.id,
+      teacher_confirmed: true,
+      transcript_json: null,
+      wcpm: null,
     },
   ];
 }
@@ -509,6 +707,10 @@ export async function seedDemoData(supabase: SupabaseClient) {
   }));
   const seededPassages = [...passages, ...practicePassages, mathInstrumentPassage];
 
+  validateEnglishBenchmarkPool(seededPassages);
+
+  await upsert(supabase, "classrooms", [demoClassroom]);
+
   await upsert(
     supabase,
     "passages",
@@ -526,11 +728,14 @@ export async function seedDemoData(supabase: SupabaseClient) {
     supabase,
     "students",
     students.map(({ id, name, grade, avatar_seed, is_demo }) => ({
-        id,
-        name,
-        grade,
         avatar_seed,
+        classroom_id: demoClassroomId,
+        grade,
+        id,
+        is_archived: false,
         is_demo,
+        name,
+        placement_source: "benchmark",
     })),
   );
 
@@ -577,6 +782,31 @@ export async function seedDemoData(supabase: SupabaseClient) {
     throw new Error("Missing English word passage for Maya's seeded baseline history.");
   }
 
+  const letterPassage = englishPassageByLevel.get("letter");
+  const chitraStudent = students.find((student) => student.name === "Chitra");
+
+  if (!letterPassage || !chitraStudent) {
+    throw new Error("The seeded Chitra promotion needs an English letter passage and student.");
+  }
+
+  const chitraPromotionAnalysis = makeAnalysis("letter", letterPassage, 0);
+  const chitraPromotionAssessment = {
+    accuracy: chitraPromotionAnalysis.accuracy_pct,
+    analysis_json: chitraPromotionAnalysis,
+    audio_url: null,
+    created_at: "2026-06-08T08:00:00.000Z",
+    id: chitraPromotionAssessmentId,
+    level: "letter",
+    passage_id: letterPassage.id,
+    student_id: chitraStudent.id,
+    teacher_confirmed: true,
+    transcript_json: {
+      text: letterPassage.body,
+      words: [],
+    },
+    wcpm: chitraPromotionAnalysis.wcpm,
+  };
+
   const mayaBaselineHistory = mayaPrerequisiteHistory();
   const mayaBaselineAssessments = mayaBaselineHistory.map((adaptive, index) => {
     const analysis = makeAnalysis("word", wordPassage, index);
@@ -585,7 +815,7 @@ export async function seedDemoData(supabase: SupabaseClient) {
       accuracy: analysis.accuracy_pct,
       analysis_json: { ...analysis, _adaptive: adaptive },
       audio_url: null,
-      created_at: `2026-07-${String(17 + index).padStart(2, "0")}T08:00:00.000Z`,
+      created_at: `2026-06-${String(11 + index * 7).padStart(2, "0")}T08:00:00.000Z`,
       id: mayaBaselineAssessmentIds[index],
       level: analysis.level,
       passage_id: wordPassage.id,
@@ -601,6 +831,7 @@ export async function seedDemoData(supabase: SupabaseClient) {
     "assessments",
     [
       ...baselineAssessments,
+      chitraPromotionAssessment,
       ...mayaBaselineAssessments,
       ...mayaLoop.map((readback) => ({
         accuracy: readback.analysis.accuracy_pct,
@@ -622,6 +853,7 @@ export async function seedDemoData(supabase: SupabaseClient) {
         },
         wcpm: readback.analysis.wcpm,
       })),
+      ...createArjunMathHistory(),
     ],
   );
 
@@ -661,7 +893,7 @@ export async function seedDemoData(supabase: SupabaseClient) {
       supabase
         .from("students")
         .select("*", { count: "exact", head: true })
-        .eq("is_demo", true),
+        .eq("classroom_id", demoClassroomId),
       supabase
         .from("passages")
         .select("*", { count: "exact", head: true })
@@ -673,8 +905,8 @@ export async function seedDemoData(supabase: SupabaseClient) {
         .from("assessments")
         .select("*", { count: "exact", head: true })
         .in(
-          "student_id",
-          students.map((student) => student.id),
+          "id",
+          demoAssessmentIds,
         ),
     ]);
 
@@ -682,7 +914,15 @@ export async function seedDemoData(supabase: SupabaseClient) {
     throw studentCountError ?? passageCountError ?? assessmentCountError;
   }
 
-  if (studentCount !== 20 || passageCount !== 11 || assessmentCount !== 24) {
+  const expectedStudentCount = students.length;
+  const expectedPassageCount = seededPassages.length;
+  const expectedAssessmentCount = demoAssessmentIds.length;
+
+  if (
+    studentCount !== expectedStudentCount ||
+    passageCount !== expectedPassageCount ||
+    assessmentCount !== expectedAssessmentCount
+  ) {
     throw new Error(
       `Unexpected demo seed counts: students=${studentCount}, passages=${passageCount}, assessments=${assessmentCount}.`,
     );
@@ -700,7 +940,14 @@ async function main() {
   } catch (error) {
     const message = describeError(error);
 
-    if (message.includes("relation \"students\" does not exist")) {
+    if (
+      message.includes("relation \"classrooms\" does not exist") ||
+      message.includes("column \"classroom_id\" does not exist")
+    ) {
+      console.error(
+        "Seed failed: apply supabase/migrations/0002_classrooms.sql in the Supabase SQL Editor before running npm run seed.",
+      );
+    } else if (message.includes("relation \"students\" does not exist")) {
       console.error(
         "Seed failed: apply supabase/migrations/0001_initial_schema.sql in the Supabase SQL Editor before running npm run seed.",
       );
